@@ -20,8 +20,8 @@ T1 safety_divide(T2 a, T3 b, bool mod=false){
     }
     return r;
 }
-template <typename T_out, typename T_bas, typename T_pow, typename T_mod>
-T_out modpow(T_bas n, T_pow m, T_mod modulo=0){
+template <typename T_out, typename T_bas, typename T_pow>
+T_out modpow(T_bas n, T_pow m, long long modulo=0){
     T_out y = 1;
     T_pow tmp = m;
     T_out bas = n;
