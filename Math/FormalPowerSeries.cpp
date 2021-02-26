@@ -1,9 +1,9 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-const int mod_hand = 998244353;
-const int root_hand = 128805723;
-const int invr_hand = 31;
+int mod_hand = 998244353;
+int root_hand = 128805723;
+int invr_hand = 31;
 long long safety_divide(long long a, long long b, bool mod=false){
     long long r, m;
     r = a / b;
@@ -312,8 +312,9 @@ vector<int> convolute_general(vector<int> f, vector<int> g, int MOD, int convolu
     }
     return res;
 }
-vector<int> inverse(vector<int> f, int MOD=mod_hand){
+vector<int> inverse(vector<int> f){
     int n = f.size();
+    int MOD = mod_hand;
     vector<int> g(1, inved(f[0]));
     int bin_top = 1;
     while (bin_top < n){
@@ -342,17 +343,19 @@ vector<int> inverse(vector<int> f, int MOD=mod_hand){
     }
     return g;
 }
-vector<int> differentiate(vector<int> f, int MOD=mod_hand){
+vector<int> differentiate(vector<int> f){
     int n = f.size();
     vector<int> res(n);
+    int MOD = mod_hand;
     for (int i=1;i<n;i++){
         res[i-1] = (long long)f[i] * i % MOD;
     }
     return res;
 }
-vector<int> integrate(vector<int> f, int MOD=mod_hand){
+vector<int> integrate(vector<int> f){
     int n = f.size();
     vector<int> res(n);
+    int MOD = mod_hand;
     vector<int> invn(n+1, 1);
     for (int i=0;i<n-1;i++){
         res[i+1] = (long long)f[i] * invn[i+1] % MOD;
@@ -360,16 +363,18 @@ vector<int> integrate(vector<int> f, int MOD=mod_hand){
     }
     return res;
 }
-vector<int> logarithm(vector<int> f, int MOD=mod_hand){
+vector<int> logarithm(vector<int> f){
     int n = f.size();
+    int MOD = mod_hand;
     vector<int> res = differentiate(f);
     res = convolute_one(res, inverse(f));
     res.resize(n);
     res = integrate(res);
     return res;
 }
-vector<int> exponential(vector<int> f, int MOD=mod_hand){
+vector<int> exponential(vector<int> f){
     int n = f.size();
+    int MOD = mod_hand;
     int bin_top = 1;
     while (bin_top < n){
         bin_top <<= 1;
@@ -423,8 +428,9 @@ vector<int> exponential(vector<int> f, int MOD=mod_hand){
     }
     return p;
 }
-vector<int> pow_of_fps(vector<int> f, int m, int MOD=mod_hand){
+vector<int> pow_of_fps(vector<int> f, int m){
     int n = f.size();
+    int MOD = mod_hand;
     int nonzero_pos = 0;
     while (f[nonzero_pos] == 0){
         nonzero_pos++;
@@ -465,8 +471,9 @@ vector<int> pow_of_fps(vector<int> f, int m, int MOD=mod_hand){
     }
     return res;
 }
-vector<int> sqrt_of_fps(vector<int> f, int MOD=mod_hand){
+vector<int> sqrt_of_fps(vector<int> f){
     int n = f.size();
+    int MOD = mod_hand;
     vector<int> g = {1};
     vector<int> res(n, 0);
     int nonzero_pos = 0;
@@ -509,8 +516,9 @@ vector<int> sqrt_of_fps(vector<int> f, int MOD=mod_hand){
     }
     return g;
 }
-vector<int> polynomial_taylor_shift(vector<int> f, int c, int MOD=mod_hand){
+vector<int> polynomial_taylor_shift(vector<int> f, int c){
     int n = f.size();
+    int MOD = mod_hand;
     vector<int> invn(n+1, 1);
     int fact = 1;
     int invf = 1;
@@ -542,8 +550,9 @@ vector<int> polynomial_taylor_shift(vector<int> f, int c, int MOD=mod_hand){
     }
     return x;
 }
-vector<int> subset_sum(vector<int> f, int t, int MOD=mod_hand){
+vector<int> subset_sum(vector<int> f, int t){
     vector<int> num_cnt(t+1, 0);
+    int MOD = mod_hand;
     for (int i: f) num_cnt[i]++;
     vector<int> invn(t+1, 1);
     for (int i=2;i<=t;i++){
@@ -563,7 +572,8 @@ vector<int> subset_sum(vector<int> f, int t, int MOD=mod_hand){
     }
     return exponential(g);
 }
-vector<int> first_stirling(int n, int MOD=mod_hand){
+vector<int> first_stirling(int n){
+    int MOD = mod_hand;
     vector<int> g = {1};
     vector<int> h = {0, 1};
     int m = 0;
@@ -580,7 +590,8 @@ vector<int> first_stirling(int n, int MOD=mod_hand){
     }
     return g;
 }
-vector<int> second_stirling(int n, int MOD=mod_hand){
+vector<int> second_stirling(int n){
+    int MOD = mod_hand;
     vector<int> g(n+1, 0);
     vector<int> h(n+1, 0);
     vector<int> invn(n+3, 1);
@@ -596,11 +607,30 @@ vector<int> second_stirling(int n, int MOD=mod_hand){
     g.resize(n+1);
     return g;
 }
+vector<int> partition_number(int n){
+    int MOD = mod_hand;
+    vector<int> invn(n+2, 1);
+    for (int i=2;i<n;i++){
+        invn[i] = (long long)(MOD - invn[MOD%i]) * (MOD/i) % MOD;
+    }
+    vector<int> g(n+1, 0);
+    for (int i=1;i<=n;i++){
+        for (int j=1;i*j<=n;j++){
+            g[i*j] = (g[i*j] + invn[j] >= MOD ? g[i*j] + invn[j] - MOD : g[i*j] + invn[j]);
+        }
+    }
+    g = exponential(g);
+    return g;
+}
 int main(void){
     // Your code here!
     int N;
     scanf("%d", &N);
-    vector<int> X = second_stirling(N);
-    vec_out(X);
+    vector<int> A(N);
+    for (int i=0;i<N;i++){
+        scanf("%d", &A[i]);
+    }
+    vector<int> X = exponential(A);
+    vec_out(X, 0, N);
     return 0;
 }
