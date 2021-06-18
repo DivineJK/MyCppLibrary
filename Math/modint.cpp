@@ -16,7 +16,7 @@ class modint{
     modint(bool a){
         x = (uint32_t)a;
     }
-    mint inv(){
+    mint inv() const{
         mint res;
         long long y = 1, z = 0, u = 0, v = 1, k = x, l = mod();
         long long tmp1, tmp2, tmp3;
