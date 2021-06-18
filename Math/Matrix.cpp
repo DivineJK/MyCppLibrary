@@ -6,7 +6,10 @@ class Matrix{
     Matrix(int n = 0, int m = 0, T x = 0){
         h = n;
         w = m;
-        a = vector<vector<T>>(h, vector<T>(w, x));
+        a = vector<vector<T>>(h, vector<T>(w));
+        for (int i=0;i<min(h, w);i++){
+            a[i][i] = x;
+        }
     }
     Matrix(vector<vector<T>> x){
         int h = x.size(), w = x[0].size();
@@ -18,6 +21,7 @@ class Matrix{
             }
         }
     }
+    Matrix(T x);
     ~Matrix(){}
     vector<T>& operator[](const int i){
         return a[i];
@@ -120,3 +124,18 @@ class Matrix{
         return res;
     }
 };
+
+template <class T, typename Tp>
+Matrix<T> pow(Matrix<T> a, Tp n){
+    int m = a.size();
+    Matrix<T> y(m, m, 1);
+    Matrix<T> b = a;
+    while (n){
+        if (n & 1){
+            y *= b;
+        }
+        b *= b;
+        n >>= 1;
+    }
+    return y;
+}
