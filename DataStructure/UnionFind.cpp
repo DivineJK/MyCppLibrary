@@ -20,39 +20,45 @@ using namespace std;
 
 class UnionFind{
     public:
-    int n = 0;
-    vector<int> par;
+    int num;
+    vector<int> parent;
     vector<int> size;
-    UnionFind(int m){
-        n = m;
-        par = vector<int>(n, 0);
-        size = vector<int>(n, 1);
-        for (int i=0;i<n;i++){
-            par[i] = i;
+    UnionFind(int n){
+        num = n;
+        parent = vector<int>(num, 0);
+        for (int i=0;i<num;i++){
+            parent[i] = i;
         }
+        size = vector<int>(num, 1);
     }
-    int root(int x){
-        if (x == par[x]){
-            return x;
+    int getRoot(int x){
+        int t = x;
+        while (t != parent[t]){
+            t = parent[t];
         }
-        par[x] = root(par[x]);
-        return par[x];
+        int s;
+        while (x != parent[x]){
+            s = x;
+            x = parent[x];
+            parent[s] = t;
+        }
+        return t;
     }
-    bool same(int x, int y){
-        return (root(x) == root(y));
+    bool isSame(int x, int y){
+        return getRoot(x) == getRoot(y);
     }
     void unite(int x, int y){
-        x = root(x);
-        y = root(y);
+        x = getRoot(x);
+        y = getRoot(y);
         if (x == y){
             return;
         }
         if (size[x] < size[y]){
-            int tmp = x;
+            int t = x;
             x = y;
-            y = tmp;
+            y = t;
         }
-        par[y] = x;
         size[x] += size[y];
+        parent[y] = x;
     }
 };
