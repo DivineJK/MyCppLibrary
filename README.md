@@ -3,9 +3,16 @@ C++のライブラリ。
 
 ## DataStructure
 
-- LazySegmentTree
-- UnionFind
+<ul>
+  <li> LazySegmentTree </li>
+  <li> UnionFind </li>
+</ul>
 
 ## Graph
+
+<ul>
+  <li> Dijkstra </li>
+  <li> DijkstraWithPathRestoring </li>
+</ul>
 
 ## Math
