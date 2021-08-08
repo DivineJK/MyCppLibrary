@@ -4,15 +4,34 @@ C++のライブラリ。
 ## DataStructure
 
 <ul>
-  <li> LazySegmentTree </li>
-  <li> UnionFind </li>
+  <li>LazySegmentTree</li>
+  <li>UnionFind</li>
 </ul>
 
 ## Graph
 
 <ul>
-  <li> Dijkstra </li>
-  <li> DijkstraWithPathRestoring </li>
+  <li>Dijkstra</li>
+  <li>DijkstraWithPathRestoring</li>
 </ul>
 
 ## Math
+
+<ul>
+  <li>BigInteger</li>
+  <li>FFT</li>
+  <li>FormalPowerSeries</li>
+  <li>Matrix</li>
+  <li>Quaternion</li>
+  <li>Rational</li>
+  <li>Vector</li>
+  <li>discrete_log</li>
+  <li>integer_tools</li>
+  <li>modint</li>
+</ul>
+
+## Others
+
+<ul>
+  <li>vector_print</li>
+</ul>
