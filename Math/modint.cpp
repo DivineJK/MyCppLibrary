@@ -1,6 +1,6 @@
 template <int m>
 class modint{
-    using mint = modint;
+    using mint = modint<m>;
     private:
     static constexpr int mod() {return m;}
     static constexpr unsigned int umod() {return m;}
@@ -16,33 +16,17 @@ class modint{
     modint(bool a){
         x = (uint32_t)a;
     }
+    unsigned int val(){
+        return x;
+    }
     mint inv() const{
-        mint res;
-        long long y = 1, z = 0, u = 0, v = 1, k = x, l = mod();
-        long long tmp1, tmp2, tmp3;
-        while (l){
-            tmp1 = y;
-            tmp2 = z;
-            tmp3 = k;
-            y = u;
-            z = v;
-            u = tmp1 - u * (k / l);
-            v = tmp2 - v * (k / l);
-            k = l;
-            l = tmp3 % l;
-            if (tmp3 < 0 && l){
-                if (k < 0){
-                    l += k;
-                    u -= y;
-                    v -= z;
-                } else{
-                    l -= k;
-                    u += y;
-                    v += z;
-                }
-            }
+        mint res = 1;
+        int n = x;
+        int mm = mod();
+        while (n > 1){
+            res *= (mm - mm / n);
+            n = mm % n;
         }
-        res = y;
         return res;
     }
     friend ostream& operator<<(ostream& os, const mint& rhs){
@@ -58,8 +42,29 @@ class modint{
     bool operator==(const mint& rhs){
         return x == rhs.x;
     }
+    template <typename T>
+    bool operator==(const T rhs){
+        mint res = mint(rhs);
+        return x == res.x;
+    }
     bool operator!=(const mint& rhs){
         return x != rhs.x;
+    }
+    template <typename T>
+    bool operator!=(const T rhs){
+        mint res = mint(rhs);
+        return x != res.x;
+    }
+    mint operator+(){
+        mint res = mint(*this);
+        return res;
+    }
+    mint operator-(){
+        mint res = mint(*this);
+        if (res.x){
+            res.x = umod() - res.x;
+        }
+        return res;
     }
     mint& operator++(){
         x++;
