@@ -19,6 +19,9 @@ class modint{
     modint(bool a){
         x = (uint32_t)a;
     }
+    unsigned int val(){
+        return x;
+    }
     mint inv() const{
         mint res = 1;
         int n = x;
