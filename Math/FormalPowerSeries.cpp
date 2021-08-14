@@ -1,0 +1,855 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+template <int m>
+class modint{
+    using mint = modint<m>;
+    private:
+    static constexpr int mod() {return m;}
+    static constexpr unsigned int umod() {return m;}
+    unsigned int x = 0;
+    public:
+    modint() {}
+    template <class T>
+    modint(T a){
+        long long z = (long long)(a % mod());
+        z = (z >= 0 ? z : z + umod());
+        x = (unsigned int)z;
+    }
+    modint(bool a){
+        x = (uint32_t)a;
+    }
+    mint inv() const{
+        mint res = 1;
+        int n = x;
+        int mm = mod();
+        while (n > 1){
+            res *= (mm - mm / n);
+            n = mm % n;
+        }
+        return res;
+    }
+    friend ostream& operator<<(ostream& os, const mint& rhs){
+        os << rhs.x;
+        return os;
+    }
+    friend istream& operator>>(istream& ist, mint& rhs){
+        unsigned int s;
+        ist >> s;
+        rhs = s;
+        return (ist);
+    }
+    bool operator==(const mint& rhs){
+        return x == rhs.x;
+    }
+    template <typename T>
+    bool operator==(const T rhs){
+        mint res = mint(rhs);
+        return x == res.x;
+    }
+    bool operator!=(const mint& rhs){
+        return x != rhs.x;
+    }
+    template <typename T>
+    bool operator!=(const T rhs){
+        mint res = mint(rhs);
+        return x != res.x;
+    }
+    mint operator+(){
+        mint res = mint(*this);
+        return res;
+    }
+    mint operator-(){
+        mint res = mint(*this);
+        if (res.x){
+            res.x = umod() - res.x;
+        }
+        return res;
+    }
+    mint& operator++(){
+        x++;
+        if (x == umod()) x = 0;
+        return *this;
+    }
+    mint& operator--(){
+        if (x == 0) x = umod();
+        x--;
+        return *this;
+    }
+    mint operator++(int){
+        mint res = *this;
+        ++*this;
+        return res;
+    }
+    mint operator--(int){
+        mint res = *this;
+        --*this;
+        return res;
+    }
+    mint& operator+=(const mint& rhs){
+        x = (x + rhs.x < umod() ? x + rhs.x : x + rhs.x - umod());
+        return *this;
+    }
+    mint& operator-=(const mint& rhs){
+        x = (x < rhs.x ? x + umod() - rhs.x : x - rhs.x);
+        return *this;
+    }
+    mint& operator*=(const mint& rhs){
+        x = (unsigned int)((long long)x * rhs.x % umod());
+        return *this;
+    }
+    mint& operator/=(const mint& rhs){
+        *this *= rhs.inv();
+        return *this;
+    }
+    mint operator+(const mint& rhs){
+        mint res = mint(*this);
+        res += rhs;
+        return res;
+    }
+    mint operator-(const mint& rhs){
+        mint res = mint(*this);
+        res -= rhs;
+        return res;
+    }
+    mint operator*(const mint& rhs){
+        mint res = mint(*this);
+        res *= rhs;
+        return res;
+    }
+    mint operator/(const mint& rhs){
+        mint res = mint(*this);
+        res /= rhs;
+        return res;
+    }
+};
+
+template <int m, typename T>
+modint<m> modpow(modint<m> x, T n){
+    modint<m> y = 1;
+    modint<m> b = x;
+    while (n){
+        if (n & 1){
+            y *= b;
+        }
+        b *= b;
+        n >>= 1;
+    }
+    return y;
+}
+
+template <const int MOD>
+class FormalPowerSeries{
+    using T = modint<MOD>;
+    using FPS = FormalPowerSeries<MOD>;
+    protected:
+    T primitiveRoot = 0;
+    T inverseRoot = 0;
+    vector<T> primitiveBaseList;
+    vector<T> inverseBaseList;
+    int baseSize = 0;
+    template <typename Tp>
+    static T modpow(T a, Tp b){
+        T y = 1;
+        T bas = a;
+        while (b){
+            if (b & 1){
+                y *= bas;
+            }
+            bas *= bas;
+            b >>= 1;
+        }
+        return y;
+    }
+    void initialize(){
+        int q = MOD-1;
+        while (!(q & 1)){
+            q >>= 1;
+            baseSize++;
+        }
+        primitiveBaseList.resize(baseSize+1);
+        inverseBaseList.resize(baseSize+1);
+        while (true){
+            bool flg = true;
+            T tmp = inverseRoot;
+            for (int i=0;i<baseSize;i++){
+                if (tmp == 1){
+                    flg = false;
+                    break;
+                }
+                tmp *= tmp;
+            }
+            if (tmp != 1){
+                flg = false;
+            }
+            if (flg){
+                break;
+            }
+            inverseRoot++;
+        }
+        primitiveRoot = modpow(inverseRoot, MOD-2);
+        primitiveBaseList[baseSize] = primitiveRoot;
+        inverseBaseList[baseSize] = inverseRoot;
+        for (int i=baseSize;i>0;i--){
+            primitiveBaseList[i-1] = primitiveBaseList[i] * primitiveBaseList[i];
+            inverseBaseList[i-1] = inverseBaseList[i] * inverseBaseList[i];
+        }
+    }
+    vector<T> getNumberTheoremTransform(vector<T> v){
+        int n = v.size();
+        int m = 1;
+        int depth = 0;
+        while (m < n){
+            depth++;
+            m <<= 1;
+        }
+        int pos = 0, tmp = 0, d;
+        vector<T> res(m, 0);
+        for (int i=0;i<m-1;i++){
+            if (pos < n){
+                res[i] = v[pos];
+            }
+            tmp = (i+1)&-(i+1);
+            d = 0;
+            while (tmp){
+                d++;
+                tmp >>= 1;
+            }
+            pos ^= n - (1<<(depth - d));
+        }
+        if (pos < n){
+            res[m-1] = v[pos];
+        }
+        T grow = 1, seed = 0;
+        int offset = 0;
+        T x, y;
+        for (int i=0;i<depth;i++){
+            grow = 1;
+            seed = primitiveBaseList[i+1];
+            offset = 1 << i;
+            for (int k=0;k<offset;k++){
+                for (int j=k;j<n;j+=1<<(i+1)){
+                    x = res[j];
+                    y = res[j+offset] * grow;
+                    res[j] = x + y;
+                    res[j+offset] = x - y;
+                }
+                grow *= seed;
+            }
+        }
+        return res;
+    }
+    vector<T> getInverseNumberTheoremTransform(vector<T> v){
+        int n = v.size();
+        int m = 1;
+        int depth = 0;
+        while (m < n){
+            depth++;
+            m <<= 1;
+        }
+        int pos = 0, tmp = 0, d;
+        vector<T> res(m, 0);
+        for (int i=0;i<m-1;i++){
+            if (pos < n){
+                res[i] = v[pos];
+            }
+            tmp = (i+1)&-(i+1);
+            d = 0;
+            while (tmp){
+                d++;
+                tmp >>= 1;
+            }
+            pos ^= n - (1<<(depth - d));
+        }
+        if (pos < n){
+            res[m-1] = v[pos];
+        }
+        T grow = 1, seed = 0;
+        int offset = 0;
+        T x, y;
+        for (int i=0;i<depth;i++){
+            grow = 1;
+            seed = inverseBaseList[i+1];
+            offset = 1 << i;
+            for (int k=0;k<offset;k++){
+                for (int j=k;j<n;j+=1<<(i+1)){
+                    x = res[j];
+                    y = res[j+offset] * grow;
+                    res[j] = x + y;
+                    res[j+offset] = x - y;
+                }
+                grow *= seed;
+            }
+        }
+        T mInverse = modpow(m, MOD-2);
+        for (int i=0;i<m;i++){
+            res[i] *= mInverse;
+        }
+        return res;
+    }
+    vector<T> convolve(vector<T> f, vector<T> g){
+        int n = f.size(), m = g.size();
+        int b = 1;
+        while (b < n + m){
+            b <<= 1;
+        }
+        vector<T> x(b, 0);
+        vector<T> y(b, 0);
+        for (int i=0;i<n;i++){
+            x[i] = f[i];
+        }
+        for (int i=0;i<m;i++){
+            y[i] = g[i];
+        }
+        x = getNumberTheoremTransform(x);
+        y = getNumberTheoremTransform(y);
+        for (int i=0;i<b;i++){
+            x[i] *= y[i];
+        }
+        x = getInverseNumberTheoremTransform(x);
+        return x;
+    }
+    void regularize(){
+        int t = degree;
+        for (int i=degree;i>=0;i--){
+            if (f[i] != 0){
+                break;
+            }
+            t--;
+        }
+        if (t == degree){
+            return;
+        }
+        f.resize(t+1);
+        degree = t;
+    }
+    public:
+    int degree = -1;
+    vector<T> f;
+    FormalPowerSeries(){
+        initialize();
+    }
+    FormalPowerSeries(const int n){
+        degree = 0;
+        f.resize(1);
+        f[0] = (T)n;
+        initialize();
+        regularize();
+    }
+    FormalPowerSeries(const T n){
+        degree = 0;
+        f.resize(1);
+        f[0] = n;
+        initialize();
+        regularize();
+    }
+    FormalPowerSeries(const vector<T> g){
+        degree = g.size() - 1;
+        f.resize(degree+1);
+        for (int i=0;i<=degree;i++){
+            f[i] = g[i];
+        }
+        initialize();
+        regularize();
+    }
+    FormalPowerSeries(const FPS& fps){
+        degree = fps.degree;
+        f.resize(degree+1);
+        for (int i=0;i<=degree;i++){
+            f[i] = fps.f[i];
+        }
+        initialize();
+        regularize();
+    }
+    void resize(const int size){
+        degree = size - 1;
+        f.resize(size);
+    }
+    void addManually(const int i, const T a){
+        if (degree < i){
+            degree = i;
+            f.resize(degree+1);
+        }
+        f[i] = a;
+    }
+    T operator[](const int i) const{
+        return f[i];
+    }
+    friend ostream& operator<<(ostream& os, FPS& fps){
+        if (fps.degree == -1){
+            os << 0;
+            return os;
+        }
+        for (int i=0;i<=fps.degree;i++){
+            if (i){
+                os << " ";
+            }
+            os << fps.f[i];
+        }
+        return os;
+    }
+    friend istream& operator>>(istream& ist, FPS& fps){
+        for (int i=0;i<=fps.degree;i++){
+            T s;
+            ist >> s;
+            fps.f[i] = s;
+        }
+        return ist;
+    }
+    bool operator==(const FPS& fps) const{
+        int lt = degree, rt = fps.degree;
+        for (int i=degree;i>=0;i--){
+            if (f[i] != (T)0){
+                break;
+            }
+            lt--;
+        }
+        for (int i=fps.degree;i>=0;i--){
+            if (fps.f[i] != (T)0){
+                break;
+            }
+            rt--;
+        }
+        if (lt != rt){
+            return false;
+        }
+        for (int i=0;i<=lt;i++){
+            if (f[i] != (T)fps.f[i]){
+                return false;
+            }
+        }
+        return true;
+    }
+    bool operator!=(const FPS& fps) const{
+        return !(*this == fps);
+    }
+    FPS operator+() const{
+        FPS res = FPS(*this);
+        return res;
+    }
+    FPS operator-() const{
+        FPS res = FPS(*this);
+        for (int i=0;i<=degree;i++){
+            res.f[i] = -res.f[i];
+        }
+        return res;
+    }
+    FPS& operator++(){
+        if (degree == -1){
+            degree = 0;
+            f.resize(1);
+            f[0] = 0;
+        }
+        f[0]++;
+        regularize();
+        return *this;
+    }
+    FPS& operator--(){
+        if (degree == -1){
+            degree = 0;
+            f.resize(1);
+            f[0] = 0;
+        }
+        f[0]--;
+        regularize();
+        return *this;
+    }
+    FPS operator++(int){
+        FPS res = FPS(*this);
+        ++*this;
+        return res;
+    }
+    FPS operator--(int){
+        FPS res = FPS(*this);
+        --*this;
+        return res;
+    }
+    FPS& operator+=(const FPS& rhs){
+        if (degree < rhs.degree){
+            f.resize(rhs.degree+1);
+            degree = rhs.degree;
+        }
+        for (int i=0;i<=rhs.degree;i++){
+            f[i] += rhs.f[i];
+        }
+        regularize();
+        return *this;
+    }
+    FPS& operator+=(const int rhs){
+        if (degree == -1){
+            f.resize(1);
+            degree = 0;
+            f[0] = 0;
+        }
+        f[0] += (T)rhs;
+        regularize();
+        return *this;
+    }
+    FPS& operator+=(const T rhs){
+        if (degree == -1){
+            f.resize(1);
+            degree = 0;
+            f[0] = 0;
+        }
+        f[0] += rhs;
+        regularize();
+        return *this;
+    }
+    FPS& operator-=(const FPS& rhs){
+        if (degree < rhs.degree){
+            f.resize(rhs.degree+1);
+            degree = rhs.degree;
+        }
+        for (int i=0;i<=rhs.degree;i++){
+            f[i] -= rhs.f[i];
+        }
+        regularize();
+        return *this;
+    }
+    FPS& operator-=(const int rhs){
+        if (degree == -1){
+            f.resize(1);
+            degree = 0;
+            f[0] = 0;
+        }
+        f[0] -= (T)rhs;
+        regularize();
+        return *this;
+    }
+    FPS& operator-=(const T rhs){
+        if (degree == -1){
+            f.resize(1);
+            degree = 0;
+            f[0] = 0;
+        }
+        f[0] -= rhs;
+        regularize();
+        return *this;
+    }
+    FPS& operator*=(const FPS& rhs){
+        degree += rhs.degree;
+        if (degree == -2){
+            degree = -1;
+        }
+        f = convolve(f, rhs.f);
+        regularize();
+        return *this;
+    }
+    FPS& operator*=(const int rhs){
+        for (int i=0;i<=degree;i++){
+            f[i] *= (T)rhs;
+        }
+        regularize();
+        return *this;
+    }
+    FPS& operator*=(const T rhs){
+        for (int i=0;i<=degree;i++){
+            f[i] *= rhs;
+        }
+        regularize();
+        return *this;
+    }
+    template <typename Tp>
+    FPS operator+(const Tp rhs){
+        FPS res = FPS(*this);
+        res += rhs;
+        return res;
+    }
+    template <typename Tp>
+    FPS operator-(const Tp rhs){
+        FPS res = FPS(*this);
+        res -= rhs;
+        return res;
+    }
+    template <typename Tp>
+    FPS operator*(const Tp rhs){
+        FPS res = FPS(*this);
+        res *= rhs;
+        return res;
+    }
+    FPS& shiftMultiply(int n){
+        degree += n;
+        f.resize(degree+1);
+        for (int i=degree;i>=n;i--){
+            f[i] = f[i-n];
+        }
+        for (int i=0;i<n;i++){
+            f[i] = 0;
+        }
+        return *this;
+    }
+    FPS shiftMultiplied(int n){
+        FPS res = FPS(*this);
+        res.shiftMultiply(n);
+        return res;
+    }
+    FPS& shiftDivide(int n){
+        if (degree < n){
+            degree = -1;
+            f.resize(0);
+            return *this;
+        }
+        for (int i=n;i<=degree;i++){
+            f[i-n] = f[i];
+        }
+        degree -= n;
+        f.resize(degree+1);
+        return *this;
+    }
+    FPS shiftDivided(int n){
+        FPS res = FPS(*this);
+        res.shiftDivide(n);
+        return res;
+    }
+    FPS& differentiate(){
+        if (degree == -1){
+            return *this;
+        }
+        for (int i=0;i<degree;i++){
+            f[i] = (T)(i+1)*f[i+1];
+        }
+        f[degree] = 0;
+        regularize();
+        return *this;
+    }
+    FPS differentiated(){
+        FPS res = FPS(*this);
+        res.differentiate();
+        return res;
+    }
+    FPS& integrate(){
+        degree++;
+        f.push_back(0);
+        vector<T> invl(degree+1, 1);
+        for (int i=2;i<=degree;i++){
+            invl[i] = (T)(MOD / i) * (-invl[MOD%i]);
+        }
+        for (int i=degree;i>0;i--){
+            f[i] = invl[i] * f[i-1];
+        }
+        f[0] = 0;
+        regularize();
+        return *this;
+    }
+    FPS integrated(){
+        FPS res = FPS(*this);
+        res.integrate();
+        return res;
+    }
+    FPS& inverse(){
+        T a = 0;
+        if (degree == -1){
+            return *this;
+        }
+        a = modpow(f[0], MOD-2);
+        FPS res(a), twoFactor(2), tmp(f[0]), h;
+        int b = 1;
+        while (b < degree+1){
+            for (int i=0;i<b;i++){
+                if (i+b >= degree+1){
+                    break;
+                }
+                tmp.f.push_back(f[i+b]);
+                tmp.degree++;
+            }
+            b <<= 1;
+            h = twoFactor - tmp * res;
+            h.resize(b);
+            res *= h;
+        }
+        res.resize(degree+1);
+        *this = res;
+        return *this;
+    }
+    FPS inversed(){
+        FPS res = FPS(*this);
+        res.inverse();
+        return res;
+    }
+    FPS& convertTaylorShift(T c){
+        if (degree <= 0){
+            return *this;
+        }
+        vector<T> fact(degree+1, 1);
+        vector<T> invf(degree+1, 1);
+        for (int i=0;i<degree;i++){
+            fact[i+1] = (fact[i] * (i+1));
+        }
+        invf[degree] = fact[degree].inv();
+        for (int i=degree;i>0;i--){
+            invf[i-1] = (invf[i] * i);
+        }
+        vector<T> x(degree+1, 0);
+        vector<T> y(degree+1, 0);
+        T t = 1;
+        for (int i=0;i<=degree;i++){
+            x[degree-i] = f[i];
+            x[degree-i] *= fact[i];
+            y[i] = t;
+            y[i] *= invf[i];
+            t *= c;
+        }
+        x = convolve(x, y);
+        for (int i=0;i<=degree;i++){
+            f[i] = invf[i];
+            f[i] *= x[degree-i];
+        }
+        return *this;
+    }
+    FPS getTaylorShift(T c){
+        FPS res = FPS(*this);
+        res.convertTaylorShift(c);
+        return res;
+    }
+};
+
+template <int m>
+FormalPowerSeries<m> logarithm(FormalPowerSeries<m> fps){
+    int n = fps.degree+1;
+    FormalPowerSeries<m> res;
+    res = fps.inversed() * fps.differentiated();
+    res.resize(n);
+    res.integrate();
+    return res;
+}
+
+template <int m>
+FormalPowerSeries<m> exponential(FormalPowerSeries<m> fps, int degreeRequire=-1){
+    int resSize = 1;
+    if (fps.degree < degreeRequire){
+        fps.resize(degreeRequire+1);
+    }
+    int x = fps.degree + 1;
+    if (x & (x - 1)){
+        while (x & (x - 1)){
+            x &= x - 1;
+        }
+        x <<= 1;
+    }
+    FormalPowerSeries<m> res(1), g(1), h(2), q, r, tmp;
+    if (fps.degree == -1){
+        tmp = 0;
+    } else{
+        tmp = fps.f[0];
+    }
+    while (2*resSize <= x){
+        q = res * g;
+        q.resize(resSize);
+        g *= (h - q);
+        g.resize(resSize);
+        q = tmp.differentiated();
+        r = q + g * (res.differentiated() - res * q);
+        r.resize(2*resSize);
+        r.integrate();
+        for (int i=0;i<resSize;i++){
+            if (i+resSize > fps.degree){
+                break;
+            }
+            tmp.addManually(i+resSize, fps.f[i+resSize]);
+        }
+        q = tmp - r;
+        q *= res;
+        res += q;
+        resSize <<= 1;
+    }
+    return res;
+}
+
+template <int m, typename T>
+FormalPowerSeries<m> power(FormalPowerSeries<m> fps, T x){
+    int t = -1;
+    int d = fps.degree;
+    modint<m> a = 0;
+    for (int i=0;i<=d;i++){
+        if (fps.f[i] != 0){
+            t = i;
+            a = fps.f[i];
+            break;
+        }
+    }
+    if (t == -1){
+        if (x == 0){
+            return FormalPowerSeries<m>(1);
+        }
+        return FormalPowerSeries<m>(0);
+    }
+    FormalPowerSeries<m> gps = fps;
+    if ((long long) x * t > d){
+        return FormalPowerSeries<m>(0);
+    }
+    gps.shiftDivide(t);
+    for (int i=0;i<=gps.degree;i++){
+        gps.f[i] /= a;
+    }
+    gps.resize(d+1);
+    gps = logarithm(gps);
+    for (int i=0;i<=d;i++){
+        gps.f[i] *= x;
+    }
+    gps = exponential(gps, d);
+    gps.shiftMultiply(x * t);
+    gps.resize(d+1);
+    a = modpow<m>(a, (long long)x);
+    for (int i=0;i<=d;i++){
+        gps.f[i] *= a;
+    }
+    return gps;
+}
+
+template <int m>
+vector<modint<m>> getBernoulliTable(int n){
+    vector<modint<m>> fact(n+2, 1);
+    for (int i=1;i<=n+1;i++){
+        fact[i] = (fact[i-1] * i);
+    }
+    vector<modint<m>> invf(n+1, 1);
+    invf[n] = fact[n+1].inv();
+    for (int i=n;i>0;i--){
+        invf[i-1] = invf[i] * (i+1);
+    }
+    FormalPowerSeries<m> r(invf);
+    r.inverse();
+    vector<modint<m>> res(n+1);
+    for (int i=0;i<=n;i++){
+        res[i] = r.f[i];
+        res[i] *= fact[i];
+    }
+    return res;
+}
+
+template <int m>
+vector<modint<m>> getPartitionNumberTable(int n){
+    vector<modint<m>> invn(n+1, 1);
+    for (int i=2;i<=n;i++){
+        invn[i] = -(invn[m%i]);
+        invn[i] *= (m / i);
+    }
+    FormalPowerSeries<m> f;
+    f.resize(n+1);
+    for (int i=1;i<=n;i++){
+        for (int j=1;i*j<=n;j++){
+            f.f[i*j] += invn[j];
+        }
+    }
+    f = exponential<m>(f);
+    for (int i=0;i<=n;i++){
+        invn[i] = f.f[i];
+    }
+    return invn;
+}
+
+template <typename T>
+void printVector(vector<T> a){
+    int n = (int)a.size();
+    if (n <= 0){
+        return;
+    }
+    cout << a[0];
+    for (int i=1;i<n;i++){
+        cout << " " << a[i];
+    }
+    cout << endl;
+}
+
+constexpr const int mod = 998244353;
+using mint = modint<mod>;
