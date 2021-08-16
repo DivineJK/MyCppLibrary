@@ -165,32 +165,41 @@ class FormalPowerSeries{
         return y;
     }
     void initialize(){
-        int q = MOD-1;
-        while (!(q & 1)){
-            q >>= 1;
-            baseSize++;
+        if (MOD == 998244353){
+            inverseRoot = (T)31;
+            primitiveRoot = inverseRoot.inv();
+            baseSize = 23;
+            primitiveBaseList.resize(baseSize+1);
+            inverseBaseList.resize(baseSize+1);
         }
-        primitiveBaseList.resize(baseSize+1);
-        inverseBaseList.resize(baseSize+1);
-        while (true){
-            bool flg = true;
-            T tmp = inverseRoot;
-            for (int i=0;i<baseSize;i++){
-                if (tmp == 1){
+        if (primitiveRoot == 0){
+            int q = MOD-1;
+            while (!(q & 1)){
+                q >>= 1;
+                baseSize++;
+            }
+            primitiveBaseList.resize(baseSize+1);
+            inverseBaseList.resize(baseSize+1);
+            while (true){
+                bool flg = true;
+                T tmp = inverseRoot;
+                for (int i=0;i<baseSize;i++){
+                    if (tmp == 1){
+                        flg = false;
+                        break;
+                    }
+                    tmp *= tmp;
+                }
+                if (tmp != 1){
                     flg = false;
+                }
+                if (flg){
                     break;
                 }
-                tmp *= tmp;
+                inverseRoot++;
             }
-            if (tmp != 1){
-                flg = false;
-            }
-            if (flg){
-                break;
-            }
-            inverseRoot++;
+            primitiveRoot = modpow(inverseRoot, MOD-2);
         }
-        primitiveRoot = modpow(inverseRoot, MOD-2);
         primitiveBaseList[baseSize] = primitiveRoot;
         inverseBaseList[baseSize] = inverseRoot;
         for (int i=baseSize;i>0;i--){
@@ -378,6 +387,18 @@ class FormalPowerSeries{
     T operator[](const int i) const{
         return f[i];
     }
+    T substitute(const T x) const{
+        T res = 0;
+        T t = 1;
+        for (int i=0;i<=degree;i++){
+            res += f[i] * t;
+            t *= x;
+        }
+        return t;
+    }
+    T substitute(const int x) const{
+        return substitute(T(x));
+    }
     friend ostream& operator<<(ostream& os, FPS& fps){
         if (fps.degree == -1){
             os << 0;
@@ -425,6 +446,15 @@ class FormalPowerSeries{
     }
     bool operator!=(const FPS& fps) const{
         return !(*this == fps);
+    }
+    FPS rev(){
+        FPS res = FPS(*this);
+        for (int i=0;2*i<=degree;i++){
+            T u = res.f[i];
+            res.f[i] = res.f[degree-i];
+            res.f[degree-i] = u;
+        }
+        return res;
     }
     FPS operator+() const{
         FPS res = FPS(*this);
@@ -485,7 +515,6 @@ class FormalPowerSeries{
             f[0] = 0;
         }
         f[0] += (T)rhs;
-        regularize();
         return *this;
     }
     FPS& operator+=(const T rhs){
@@ -495,7 +524,6 @@ class FormalPowerSeries{
             f[0] = 0;
         }
         f[0] += rhs;
-        regularize();
         return *this;
     }
     FPS& operator-=(const FPS& rhs){
@@ -516,7 +544,6 @@ class FormalPowerSeries{
             f[0] = 0;
         }
         f[0] -= (T)rhs;
-        regularize();
         return *this;
     }
     FPS& operator-=(const T rhs){
@@ -526,7 +553,6 @@ class FormalPowerSeries{
             f[0] = 0;
         }
         f[0] -= rhs;
-        regularize();
         return *this;
     }
     FPS& operator*=(const FPS& rhs){
@@ -542,14 +568,12 @@ class FormalPowerSeries{
         for (int i=0;i<=degree;i++){
             f[i] *= (T)rhs;
         }
-        regularize();
         return *this;
     }
     FPS& operator*=(const T rhs){
         for (int i=0;i<=degree;i++){
             f[i] *= rhs;
         }
-        regularize();
         return *this;
     }
     template <typename Tp>
@@ -579,6 +603,7 @@ class FormalPowerSeries{
         for (int i=0;i<n;i++){
             f[i] = 0;
         }
+        regularize();
         return *this;
     }
     FPS shiftMultiplied(int n){
@@ -597,6 +622,7 @@ class FormalPowerSeries{
         }
         degree -= n;
         f.resize(degree+1);
+        regularize();
         return *this;
     }
     FPS shiftDivided(int n){
@@ -669,6 +695,43 @@ class FormalPowerSeries{
         res.inverse();
         return res;
     }
+    FPS& operator/=(const FPS& rhs){
+        if (degree < rhs.degree){
+            *this = FPS(0);
+            return *this;
+        }
+        FPS tmp = rhs;
+        FPS fr = rev();
+        FPS gr = tmp.rev();
+        fr.resize(degree - rhs.degree + 1);
+        gr.resize(degree - rhs.degree + 1);
+        fr *= gr.inverse();
+        fr.resize(degree - rhs.degree + 1);
+        *this = fr.rev();
+        regularize();
+        return *this;
+    }
+    FPS& operator/=(const T rhs){
+        for (int i=0;i<=degree;i++){
+            f[i] /= rhs;
+        }
+        return *this;
+    }
+    template<typename Tp>
+    FPS operator/(const Tp rhs){
+        FPS res = FPS(*this);
+        res /= rhs;
+        return res;
+    }
+    FPS& operator%=(const FPS& rhs){
+        *this -= (*this / rhs) * rhs;
+        return *this;
+    }
+    FPS operator%(const FPS rhs){
+        FPS res = FPS(*this);
+        res %= rhs;
+        return res;
+    }
     FPS& convertTaylorShift(T c){
         if (degree <= 0){
             return *this;
@@ -697,11 +760,40 @@ class FormalPowerSeries{
             f[i] = invf[i];
             f[i] *= x[degree-i];
         }
+        regularize();
         return *this;
     }
     FPS getTaylorShift(T c){
         FPS res = FPS(*this);
         res.convertTaylorShift(c);
+        return res;
+    }
+    vector<T> getMultipointEvaluation(const vector<T>& p){
+        int n = p.size();
+        int b = n;
+        if (b & (b - 1)){
+            while (b & (b - 1)){
+                b &= b - 1;
+            }
+            b <<= 1;
+        }
+        vector<FPS> fs(b<<1, 1);
+        T t;
+        for (int i=0;i<n;i++){
+            t = p[i];
+            fs[i+b] = FPS({-t, 1});
+        }
+        for (int i=b-1;i>=1;i--){
+            fs[i] = fs[1|(i<<1)] * fs[i<<1];
+        }
+        fs[1] = *this % fs[1];
+        for (int i=2;i<2*b;i++){
+            fs[i] = fs[i>>1] % fs[i];
+        }
+        vector<T> res(n);
+        for (int i=0;i<n;i++){
+            res[i] = fs[i+b].f[0];
+        }
         return res;
     }
 };
@@ -800,7 +892,39 @@ FormalPowerSeries<m> power(FormalPowerSeries<m> fps, T x){
 }
 
 template <int m>
-vector<modint<m>> getBernoulliTable(int n){
+FormalPowerSeries<m> interpolate(vector<modint<m>> x, vector<modint<m>> y){
+    int n = x.size();
+    int b = 1;
+    while (b < n){
+        b <<= 1;
+    }
+    vector<FormalPowerSeries<m>> v(b << 1, 1);
+    vector<FormalPowerSeries<m>> v2(b<<1, 0);
+    for (int i=0;i<n;i++){
+        v[i+b].resize(2);
+        v[i+b].f[0] = -x[i];
+        v[i+b].f[1] = 1;
+    }
+    for (int i=b-1;i>0;i--){
+        v[i] = v[i<<1] * v[(i<<1)|1];
+    }
+    FormalPowerSeries<m> F = v[1];
+    FormalPowerSeries<m> dF = F.differentiated();
+    v2[1] = dF % v[1];
+    for (int i=2;i<2*b;i++){
+        v2[i] = v2[i>>1] % v[i];
+    }
+    for (int i=0;i<n;i++){
+        v2[i+b].f[0] = y[i] / v2[i+b].f[0];
+    }
+    for (int i=b-1;i>0;i--){
+        v2[i] = v2[i<<1]*v[(i<<1)|1] + v[i<<1]*v2[(i<<1)|1];
+    }
+    return v2[1];
+}
+
+template <int m>
+vector<modint<m>> getBernoulliNumberTable(int n){
     vector<modint<m>> fact(n+2, 1);
     for (int i=1;i<=n+1;i++){
         fact[i] = (fact[i-1] * i);
@@ -839,6 +963,54 @@ vector<modint<m>> getPartitionNumberTable(int n){
         invn[i] = f.f[i];
     }
     return invn;
+}
+
+template <int m>
+vector<modint<m>> getStirlingNumberOfFirstTable(int n){
+    FormalPowerSeries<m> g = 1;
+    FormalPowerSeries<m> h({0, 1});
+    int b = 1;
+    int t = 0;
+    while (t < n){
+        if (b & n){
+            g *= h.getTaylorShift(-modint<m>(t));
+            t += b;
+        }
+        h *= h.getTaylorShift(-modint<m>(b));
+        b <<= 1;
+    }
+    vector<modint<m>> res(n+1);
+    for (int i=0;i<=n;i++){
+        res[i] = g.f[i];
+    }
+    return res;
+}
+
+template <int m>
+vector<modint<m>> getStirlingNumberOfSecondTable(int n){
+    vector<modint<m>> a(n+1);
+    vector<modint<m>> b(n+1);
+    vector<modint<m>> invn(n+2, 1);
+    for (int i=2;i<=n;i++){
+        invn[i] = (-invn[m%i])*(m/i);
+    }
+    modint<m> t = 1, sign = 1;
+    for (int i=0;i<=n;i++){
+        a[i] = modpow<m>(i, n) * t;
+        b[i] = sign * t;
+        if (sign == 1){
+            sign = m - 1;
+        } else{
+            sign = 1;
+        }
+        t *= invn[i+1];
+    }
+    FormalPowerSeries<m> f(a), g(b);
+    f *= g;
+    for (int i=0;i<=n;i++){
+        a[i] = f.f[i];
+    }
+    return a;
 }
 
 template <typename T>
