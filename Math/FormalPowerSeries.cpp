@@ -141,6 +141,62 @@ modint<m> modpow(modint<m> x, T n){
     return y;
 }
 
+template <typename T, typename S, typename U>
+T modpow(T n, S m, U p){
+    T y = 1;
+    T b = n;
+    while (m){
+        if (m & 1){
+            y = (long long)y * b % p;
+        }
+        b = (long long)b * b % p;
+        m >>= 1;
+    }
+    return y;
+}
+
+int modsqrt(int a, int m){
+    if (m == 2){
+        return a;
+    }
+    if (a == 0){
+        return 0;
+    }
+    if (modpow(a, m>>1, m) == m - 1){
+        return -1;
+    }
+    int z = 1;
+    while (modpow(z, m>>1, m) == 1){
+        z++;
+    }
+    int q = m - 1, s = 0;
+    while (~q & 1){
+        q >>= 1;
+        s++;
+    }
+    z = modpow(z, q, m);
+    int r = modpow(a, (q+1)>>1, m);
+    int t = modpow(a, q, m);
+    int b, i, c;
+    while (t - 1){
+        c = t;
+        i = 0;
+        while (c - 1){
+            i++;
+            c = (long long)c * c % m;
+        }
+        b = modpow(z, 1<<(s-i-1), m);
+        z = (long long)b * b % m;
+        s = i;
+        t = (long long)t * z % m;
+        r = (long long)r * b % m;
+    }
+    if (r > m - r){
+        r = m - r;
+    }
+    return r;
+}
+
 template <const int MOD>
 class FormalPowerSeries{
     using T = modint<MOD>;
@@ -341,37 +397,45 @@ class FormalPowerSeries{
     FormalPowerSeries(){
         initialize();
     }
-    FormalPowerSeries(const int n){
+    FormalPowerSeries(const int n, bool reg=true){
         degree = 0;
         f.resize(1);
         f[0] = (T)n;
         initialize();
-        regularize();
+        if (reg){
+            regularize();
+        }
     }
-    FormalPowerSeries(const T n){
+    FormalPowerSeries(const T n, bool reg=true){
         degree = 0;
         f.resize(1);
         f[0] = n;
         initialize();
-        regularize();
+        if (reg){
+            regularize();
+        }
     }
-    FormalPowerSeries(const vector<T> g){
+    FormalPowerSeries(const vector<T> g, bool reg=true){
         degree = g.size() - 1;
         f.resize(degree+1);
         for (int i=0;i<=degree;i++){
             f[i] = g[i];
         }
         initialize();
-        regularize();
+        if (reg){
+            regularize();
+        }
     }
-    FormalPowerSeries(const FPS& fps){
+    FormalPowerSeries(const FPS& fps, bool reg=true){
         degree = fps.degree;
         f.resize(degree+1);
         for (int i=0;i<=degree;i++){
             f[i] = fps.f[i];
         }
         initialize();
-        regularize();
+        if (reg){
+            regularize();
+        }
     }
     void resize(const int size){
         degree = size - 1;
@@ -668,6 +732,7 @@ class FormalPowerSeries{
     FPS& inverse(){
         T a = 0;
         if (degree == -1){
+            degree = -2;
             return *this;
         }
         a = modpow(f[0], MOD-2);
@@ -794,6 +859,51 @@ class FormalPowerSeries{
         for (int i=0;i<n;i++){
             res[i] = fs[i+b].f[0];
         }
+        return res;
+    }
+    FPS& convertSqrt(){
+        if (degree == -1){
+            return *this;
+        }
+        int btm = 0;
+        for (int i=0;i<=degree;i++){
+            if (f[i] == 0){
+                btm++;
+            } else{
+                break;
+            }
+        }
+        if (btm & 1){
+            degree = -2;
+            return *this;
+        }
+        int z = degree - (btm >> 1);
+        FPS res = FPS(*this, false).shiftDivided(btm);
+        int b = 1;
+        int t = modsqrt(res.f[0].val(), MOD);
+        if (t == -1){
+            degree = -2;
+            return *this;
+        }
+        T x = T(t).inv();
+        FPS g(x), h(0);
+        T i2 = T(2).inv();
+        while (b < z + 1){
+            h = g * g;
+            h = FPS(3) - res * h;
+            b <<= 1;
+            h.resize(b);
+            g *= h;
+            g *= i2;
+            g.resize(b);
+        }
+        *this = g.inverse();
+        shiftMultiply(btm>>1);
+        return *this;
+    }
+    FPS getSqrt(){
+        FPS res = FPS(*this);
+        res.convertSqrt();
         return res;
     }
 };
