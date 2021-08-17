@@ -885,20 +885,26 @@ class FormalPowerSeries{
             degree = -2;
             return *this;
         }
-        T x = T(t).inv();
-        FPS g(x), h(0);
+        int bt = 1;
+        while (bt <= z){
+            bt <<= 1;
+        }
+        T x = t;
+        FPS g(x), h(res.f[0]);
         T i2 = T(2).inv();
-        while (b < z + 1){
-            h = g * g;
-            h = FPS(3) - res * h;
+        while (b <= bt){
+            for (int i=0;i<b;i++){
+                if (i+b>res.degree){
+                    break;
+                }
+                h.addManually(i+b, res.f[i+b]);
+            }
+            g += g.inversed() * h;
             b <<= 1;
-            h.resize(b);
-            g *= h;
             g *= i2;
             g.resize(b);
         }
-        *this = g.inverse();
-        shiftMultiply(btm>>1);
+        *this = g.shiftMultiply(btm>>1);
         return *this;
     }
     FPS getSqrt(){
