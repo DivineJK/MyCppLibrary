@@ -1040,6 +1040,136 @@ FormalPowerSeries<m> interpolate(vector<modint<m>> x, vector<modint<m>> y){
 }
 
 template <int m>
+FormalPowerSeries<m> compose(FormalPowerSeries<m> lhs, FormalPowerSeries<m> rhs, int degreeRequire=-1){
+    int n = (degreeRequire == -1 ? lhs.degree : degreeRequire);
+    if (n <= 0){
+        return lhs;
+    }
+    int b = 1, c = 0;
+    while (b <= n){
+        b <<= 1;
+        c++;
+    }
+    int l = 0, r = n + 2;
+    int k = n / 2 + 1;
+    while (r - l > 1){
+        if ((long long)c * k * k <= n + 1){
+            l = k;
+        } else{
+            r = k;
+        }
+        k = (l + r) / 2;
+    }
+    if (c * k * k <= n){
+        k++;
+    }
+    FormalPowerSeries<m> p = rhs, q = rhs.shiftDivided(k);
+    p.resize(k);
+    FormalPowerSeries<m> tmpsq = p;
+    FormalPowerSeries<m> bas = 1;
+    if (tmpsq.degree == -1){
+        FormalPowerSeries<m> res = 0;
+        for (int i=0;i<=(n+k-1)/k;i++){
+            if (i <= lhs.degree){
+                tmpsq = bas * FormalPowerSeries<m>(lhs.f[i]);
+                tmpsq.shiftMultiply(i*k);
+                res += tmpsq;
+                if (res.degree > n){
+                    res.resize(n+1);
+                }
+                bas *= q;
+                if (bas.degree > n){
+                    bas.resize(n+1);
+                }
+            }
+        }
+        return res;
+    }
+    vector<FormalPowerSeries<m>> v(b<<1, 0);
+    for (int i=0;i<=n;i++){
+        v[i+b].resize(1);
+        v[i+b].f[0] = lhs.f[i];
+    }
+    for (int i=b-1;i>0;i--){
+        v[i] = v[i<<1] + v[(i<<1)|1] * tmpsq;
+        if (v[i].degree > n){
+            v[i].resize(n+1);
+        }
+        if ((i & (i - 1)) == 0){
+            tmpsq *= tmpsq;
+            if (tmpsq.degree > n){
+                tmpsq.resize(n+1);
+            }
+        }
+    }
+    vector<modint<m>> invf((n+k-1)/k + 1, 1);
+    for (int i=2;i<=(n+k-1)/k;i++){
+        invf[i] = -(invf[m%i] * (m/i));
+    }
+    for (int i=0;i<(n+k-1)/k;i++){
+        invf[i+1] *= invf[i];
+    }
+    FormalPowerSeries<m> t = v[1];
+    FormalPowerSeries<m> ip = p.differentiated();
+    int lz = 0;
+    for (int i=0;i<=ip.degree;i++){
+        if (ip.f[i] != 0){
+            break;
+        }
+        lz++;
+    }
+    ip.shiftDivide(lz);
+    ip.resize(n+1);
+    ip.inverse();
+    bas = 1;
+    FormalPowerSeries<m> res = v[1];
+    t.differentiate();
+    t *= ip;
+    t.shiftDivide(lz);
+    bas *= q;
+    FormalPowerSeries<m> X = ip * p.differentiated();
+    for (int i=1;i<=(n+lz+k-1)/k;i++){
+        tmpsq = t * bas;
+        tmpsq.shiftMultiply(i*k);
+        if (tmpsq.degree > n){
+            tmpsq.resize(n+1);
+        }
+        res += tmpsq * invf[i];
+        bas *= q;
+        if (bas.degree > n){
+            bas.resize(n+1);
+        }
+        if (res.degree > n){
+            res.resize(n+1);
+        }
+        t.differentiate();
+        t *= ip;
+        t.shiftDivide(lz);
+        if (t.degree > n+1){
+            t.resize(n+2);
+        }
+    }
+    return res;
+    // rhs(x) = p(x) + q(x) * x^k
+    // lhs(p(x)+q(x)*x^k) = lhs(p(x)) + lhs'(p(x)) * q(x)x^k + lhs''(p(x)) * q(x)^2 * x^2k / 2 + ...
+    // lhs(x) = s(x) + t(x) * x^(|lhs(x)|/2)
+    // lhs(x) = s(p(x)) + t(p(x)) * p(x)^(|lhs(x)|/2)
+}
+
+template <int m>
+FormalPowerSeries<m> naiveCompose(FormalPowerSeries<m> lhs, FormalPowerSeries<m> rhs){
+    int n = lhs.degree;
+    FormalPowerSeries<m> g(1);
+    FormalPowerSeries<m> res(0);
+    for (int i=0;i<=n;i++){
+        res += g * lhs.f[i];
+        g *= rhs;
+        g.resize(n+1);
+    }
+    return res;
+}
+
+template <int m>
 vector<modint<m>> getBernoulliNumberTable(int n){
     vector<modint<m>> fact(n+2, 1);
     for (int i=1;i<=n+1;i++){
