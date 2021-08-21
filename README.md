@@ -4,6 +4,7 @@ C++のライブラリ。
 ## DataStructure
 
 <ul>
+  <li>BinaryIndexedTree</li>
   <li>LazySegmentTree</li>
   <li>UnionFind</li>
 </ul>
@@ -18,6 +19,11 @@ C++のライブラリ。
 ## Math
 
 <ul>
+  <li>Convolution
+    <ul>
+      <li>Convolution_sum</li>
+    </ul>
+  </li>
   <li>BigInteger</li>
   <li>FFT</li>
   <li>FormalPowerSeries</li>
