@@ -1150,10 +1150,6 @@ FormalPowerSeries<m> compose(FormalPowerSeries<m> lhs, FormalPowerSeries<m> rhs,
         }
     }
     return res;
-    // rhs(x) = p(x) + q(x) * x^k
-    // lhs(p(x)+q(x)*x^k) = lhs(p(x)) + lhs'(p(x)) * q(x)x^k + lhs''(p(x)) * q(x)^2 * x^2k / 2 + ...
-    // lhs(x) = s(x) + t(x) * x^(|lhs(x)|/2)
-    // lhs(x) = s(p(x)) + t(p(x)) * p(x)^(|lhs(x)|/2)
 }
 
 template <int m>
@@ -1259,6 +1255,28 @@ vector<modint<m>> getStirlingNumberOfSecondTable(int n){
     return a;
 }
 
+template <int m>
+vector<modint<m>> getSubsetSum(vector<modint<m>> v){
+    int t = v.size() - 1;
+    vector<modint<m>> invn(t+1, 1);
+    for (int i=2;i<=t;i++){
+        invn[i] = -invn[m%i]*(m/i);
+    }
+    modint<m> offset = modpow(2, v[0].val(), m), sign = 1;
+    vector<modint<m>> res(t+1);
+    for (int i=1;i<=t;i++){
+        sign = 1;
+        for (int j=1;i*j<=t;j++){
+            res[i*j] += sign * invn[j] * v[i];
+            sign *= m - 1;
+        }
+    }
+    FormalPowerSeries<m> fps(res);
+    fps = exponential(fps);
+    fps *= offset;
+    return fps.f;
+}
+
 template <typename T>
 void printVector(vector<T> a){
     int n = (int)a.size();
@@ -1274,3 +1292,4 @@ void printVector(vector<T> a){
 
 constexpr const int mod = 998244353;
 using mint = modint<mod>;
+using FPS = FormalPowerSeries<mod>;
