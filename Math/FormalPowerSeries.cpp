@@ -206,6 +206,7 @@ class FormalPowerSeries{
     T inverseRoot = 0;
     vector<T> primitiveBaseList;
     vector<T> inverseBaseList;
+    vector<T> cumulativeBase;
     int baseSize = 0;
     template <typename Tp>
     static T modpow(T a, Tp b){
@@ -227,6 +228,7 @@ class FormalPowerSeries{
             baseSize = 23;
             primitiveBaseList.resize(baseSize+1);
             inverseBaseList.resize(baseSize+1);
+            cumulativeBase.resize(baseSize-1);
         }
         if (primitiveRoot == 0){
             int q = MOD-1;
@@ -262,6 +264,11 @@ class FormalPowerSeries{
             primitiveBaseList[i-1] = primitiveBaseList[i] * primitiveBaseList[i];
             inverseBaseList[i-1] = inverseBaseList[i] * inverseBaseList[i];
         }
+        T ie = 1;
+        for (int i=0;i<baseSize-1;i++){
+            cumulativeBase[i] = ie * primitiveBaseList[i+2];
+            ie *= inverseBaseList[i+2];
+        }
     }
     vector<T> getNumberTheoremTransform(vector<T> v){
         int n = v.size();
@@ -271,41 +278,30 @@ class FormalPowerSeries{
             depth++;
             m <<= 1;
         }
-        int pos = 0, tmp = 0, d;
-        vector<T> res(m, 0);
-        for (int i=0;i<m-1;i++){
-            if (pos < n){
-                res[i] = v[pos];
-            }
-            tmp = (i+1)&-(i+1);
-            d = 0;
-            while (tmp){
-                d++;
-                tmp >>= 1;
-            }
-            pos ^= n - (1<<(depth - d));
-        }
-        if (pos < n){
-            res[m-1] = v[pos];
-        }
-        T grow = 1, seed = 0;
-        int offset = 0;
+        T grow = 1;
+        int p = 1, t = 1 << (depth - 1), offset = 0, w, z;
         T x, y;
         for (int i=0;i<depth;i++){
             grow = 1;
-            seed = primitiveBaseList[i+1];
-            offset = 1 << i;
-            for (int k=0;k<offset;k++){
-                for (int j=k;j<n;j+=1<<(i+1)){
-                    x = res[j];
-                    y = res[j+offset] * grow;
-                    res[j] = x + y;
-                    res[j+offset] = x - y;
+            for (int j=0;j<p;j++){
+                offset = j << (depth - i);
+                for (int k=0;k<t;k++){
+                    x = v[k+offset];
+                    y = v[k+offset+t] * grow;
+                    v[k+offset] = x + y;
+                    v[k+offset+t] = x - y;
                 }
-                grow *= seed;
+                w = (j+1)^(j&(j+1)), z = -1;
+                while (w){
+                    z++;
+                    w >>= 1;
+                }
+                grow *= cumulativeBase[z];
             }
+            p <<= 1;
+            t >>= 1;
         }
-        return res;
+        return v;
     }
     vector<T> getInverseNumberTheoremTransform(vector<T> v){
         int n = v.size();
@@ -314,23 +310,6 @@ class FormalPowerSeries{
         while (m < n){
             depth++;
             m <<= 1;
-        }
-        int pos = 0, tmp = 0, d;
-        vector<T> res(m, 0);
-        for (int i=0;i<m-1;i++){
-            if (pos < n){
-                res[i] = v[pos];
-            }
-            tmp = (i+1)&-(i+1);
-            d = 0;
-            while (tmp){
-                d++;
-                tmp >>= 1;
-            }
-            pos ^= n - (1<<(depth - d));
-        }
-        if (pos < n){
-            res[m-1] = v[pos];
         }
         T grow = 1, seed = 0;
         int offset = 0;
@@ -341,19 +320,19 @@ class FormalPowerSeries{
             offset = 1 << i;
             for (int k=0;k<offset;k++){
                 for (int j=k;j<n;j+=1<<(i+1)){
-                    x = res[j];
-                    y = res[j+offset] * grow;
-                    res[j] = x + y;
-                    res[j+offset] = x - y;
+                    x = v[j];
+                    y = v[j+offset] * grow;
+                    v[j] = x + y;
+                    v[j+offset] = x - y;
                 }
                 grow *= seed;
             }
         }
         T mInverse = modpow(m, MOD-2);
         for (int i=0;i<m;i++){
-            res[i] *= mInverse;
+            v[i] *= mInverse;
         }
-        return res;
+        return v;
     }
     vector<T> convolve(vector<T> f, vector<T> g){
         int n = f.size(), m = g.size();
@@ -842,11 +821,13 @@ class FormalPowerSeries{
             }
             b <<= 1;
         }
+        vector<T> tmpt = {0, 1};
         vector<FPS> fs(b<<1, 1);
         T t;
         for (int i=0;i<n;i++){
-            t = p[i];
-            fs[i+b] = FPS({-t, 1});
+            tmpt[0] = p[i];
+            tmpt[0] *= -1;
+            fs[i+b] = FPS(tmpt);
         }
         for (int i=b-1;i>=1;i--){
             fs[i] = fs[1|(i<<1)] * fs[i<<1];
