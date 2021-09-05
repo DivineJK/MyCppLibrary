@@ -838,6 +838,10 @@ class FormalPowerSeries{
         }
         vector<T> res(n);
         for (int i=0;i<n;i++){
+            if (fs[i+b].degree < 0){
+                res[i] = 0;
+                continue;
+            }
             res[i] = fs[i+b].f[0];
         }
         return res;
