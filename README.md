@@ -1,4 +1,4 @@
-# my_cpp_libraries
+# MyCppLibrary
 C++のライブラリ。
 
 ## DataStructure
