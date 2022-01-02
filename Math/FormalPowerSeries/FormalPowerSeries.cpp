@@ -1,6 +1,20 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+template <typename T>
+void printVector(vector<T> a){
+    int n = (int)a.size();
+    if (n <= 0){
+        cout << endl;
+        return;
+    }
+    cout << a[0];
+    for (int i=1;i<n;i++){
+        cout << " " << a[i];
+    }
+    cout << endl;
+}
+
 template <int m>
 class modint{
     using mint = modint<m>;
@@ -202,12 +216,17 @@ class FormalPowerSeries{
     using T = modint<MOD>;
     using FPS = FormalPowerSeries<MOD>;
     protected:
-    T primitiveRoot = 0;
-    T inverseRoot = 0;
-    vector<T> primitiveBaseList;
-    vector<T> inverseBaseList;
-    vector<T> cumulativeBase;
-    int baseSize = 0;
+    inline static bool isInitialized = false;
+    inline static T primitiveRoot = ((T)31).inv();
+    inline static T inverseRoot = 31;
+    inline static vector<T> primitiveBaseList = {};
+    inline static vector<T> inverseBaseList = {};
+    inline static vector<T> cumulativeBase = {};
+    inline static int baseSize = 23;
+    bool isValid = true;
+    int degree = -1;
+    vector<T> polynomial;
+    protected:
     template <typename Tp>
     static T modpow(T a, Tp b){
         T y = 1;
@@ -221,7 +240,11 @@ class FormalPowerSeries{
         }
         return y;
     }
-    void initialize(){
+    static void initialize(){
+        if (isInitialized){
+            return;
+        }
+        isInitialized = true;
         if (MOD == 998244353){
             inverseRoot = (T)31;
             primitiveRoot = inverseRoot.inv();
@@ -336,6 +359,9 @@ class FormalPowerSeries{
     }
     vector<T> convolve(vector<T> f, vector<T> g){
         int n = f.size(), m = g.size();
+        if (n == 0 || m == 0){
+            return {};
+        }
         int b = 1;
         while (b < n + m){
             b <<= 1;
@@ -354,12 +380,13 @@ class FormalPowerSeries{
             x[i] *= y[i];
         }
         x = getInverseNumberTheoremTransform(x);
+        x.resize(n+m-1);
         return x;
     }
     void regularize(){
         int t = degree;
         for (int i=degree;i>=0;i--){
-            if (f[i] != 0){
+            if (polynomial[i] != 0){
                 break;
             }
             t--;
@@ -367,74 +394,89 @@ class FormalPowerSeries{
         if (t == degree){
             return;
         }
-        f.resize(t+1);
+        polynomial.resize(t+1);
         degree = t;
     }
     public:
-    int degree = -1;
-    vector<T> f;
     FormalPowerSeries(){
+        isValid = true;
         initialize();
     }
-    FormalPowerSeries(const int n, bool reg=true){
+    FormalPowerSeries(const int n){
+        initialize();
         degree = 0;
-        f.resize(1);
-        f[0] = (T)n;
-        initialize();
-        if (reg){
-            regularize();
-        }
+        polynomial.resize(1);
+        polynomial[0] = (T)n;
+        regularize();
     }
-    FormalPowerSeries(const T n, bool reg=true){
+    FormalPowerSeries(const T n){
+        initialize();
         degree = 0;
-        f.resize(1);
-        f[0] = n;
-        initialize();
-        if (reg){
-            regularize();
-        }
+        polynomial.resize(1);
+        polynomial[0] = n;
+        regularize();
     }
-    FormalPowerSeries(const vector<T> g, bool reg=true){
+    FormalPowerSeries(const vector<int> g){
+        initialize();
         degree = g.size() - 1;
-        f.resize(degree+1);
+        polynomial.resize(degree+1);
         for (int i=0;i<=degree;i++){
-            f[i] = g[i];
+            polynomial[i] = (T)g[i];
         }
-        initialize();
-        if (reg){
-            regularize();
-        }
+        regularize();
     }
-    FormalPowerSeries(const FPS& fps, bool reg=true){
+    FormalPowerSeries(const vector<T> g){
+        initialize();
+        degree = g.size() - 1;
+        polynomial.resize(degree+1);
+        for (int i=0;i<=degree;i++){
+            polynomial[i] = g[i];
+        }
+        regularize();
+    }
+    FormalPowerSeries(const FPS& fps){
+        initialize();
         degree = fps.degree;
-        f.resize(degree+1);
+        polynomial.resize(degree+1);
         for (int i=0;i<=degree;i++){
-            f[i] = fps.f[i];
+            polynomial[i] = fps.polynomial[i];
         }
-        initialize();
-        if (reg){
-            regularize();
+        regularize();
+    }
+    void setIsValid(const bool b){
+        if (!b){
+            setDegree(-1);
         }
+        isValid = b;
     }
-    void resize(const int size){
-        degree = size - 1;
-        f.resize(size);
+    bool getIsValid() const{
+        return isValid;
     }
-    void addManually(const int i, const T a){
+    void setDegree(const int aDegree){
+        degree = aDegree;
+        polynomial.resize(degree+1);
+    }
+    int getDegree() const{
+        return degree;
+    }
+    void setCoefficient(const int i, const T a){
         if (degree < i){
             degree = i;
-            f.resize(degree+1);
+            polynomial.resize(degree+1);
         }
-        f[i] = a;
+        polynomial[i] = a;
     }
-    T operator[](const int i) const{
-        return f[i];
+    T getCoefficient(const int i) const{
+        if (degree < i){
+            return 0;
+        }
+        return polynomial[i];
     }
     T substitute(const T x) const{
         T res = 0;
         T t = 1;
         for (int i=0;i<=degree;i++){
-            res += f[i] * t;
+            res += polynomial[i] * t;
             t *= x;
         }
         return t;
@@ -451,7 +493,7 @@ class FormalPowerSeries{
             if (i){
                 os << " ";
             }
-            os << fps.f[i];
+            os << fps.polynomial[i];
         }
         return os;
     }
@@ -459,20 +501,21 @@ class FormalPowerSeries{
         for (int i=0;i<=fps.degree;i++){
             T s;
             ist >> s;
-            fps.f[i] = s;
+            fps.polynomial[i] = s;
         }
+        fps.regularize();
         return ist;
     }
     bool operator==(const FPS& fps) const{
         int lt = degree, rt = fps.degree;
         for (int i=degree;i>=0;i--){
-            if (f[i] != (T)0){
+            if (polynomial[i] != (T)0){
                 break;
             }
             lt--;
         }
         for (int i=fps.degree;i>=0;i--){
-            if (fps.f[i] != (T)0){
+            if (fps.polynomial[i] != (T)0){
                 break;
             }
             rt--;
@@ -481,7 +524,7 @@ class FormalPowerSeries{
             return false;
         }
         for (int i=0;i<=lt;i++){
-            if (f[i] != (T)fps.f[i]){
+            if (polynomial[i] != (T)fps.polynomial[i]){
                 return false;
             }
         }
@@ -490,13 +533,17 @@ class FormalPowerSeries{
     bool operator!=(const FPS& fps) const{
         return !(*this == fps);
     }
-    FPS rev(){
-        FPS res = FPS(*this);
+    FPS& convertToReversedPolynomial(){
         for (int i=0;2*i<=degree;i++){
-            T u = res.f[i];
-            res.f[i] = res.f[degree-i];
-            res.f[degree-i] = u;
+            T u = polynomial[i];
+            polynomial[i] = polynomial[degree-i];
+            polynomial[degree-i] = u;
         }
+        return *this;
+    }
+    FPS getReversedPolynomial(){
+        FPS res = FPS(*this);
+        res.convertToReversedPolynomial();
         return res;
     }
     FPS operator+() const{
@@ -506,27 +553,23 @@ class FormalPowerSeries{
     FPS operator-() const{
         FPS res = FPS(*this);
         for (int i=0;i<=degree;i++){
-            res.f[i] = -res.f[i];
+            res.polynomial[i] = -res.polynomial[i];
         }
         return res;
     }
     FPS& operator++(){
         if (degree == -1){
-            degree = 0;
-            f.resize(1);
-            f[0] = 0;
+            setDegree(0);
         }
-        f[0]++;
+        polynomial[0]++;
         regularize();
         return *this;
     }
     FPS& operator--(){
         if (degree == -1){
-            degree = 0;
-            f.resize(1);
-            f[0] = 0;
+            setDegree(0);
         }
-        f[0]--;
+        polynomial[0]--;
         regularize();
         return *this;
     }
@@ -542,80 +585,76 @@ class FormalPowerSeries{
     }
     FPS& operator+=(const FPS& rhs){
         if (degree < rhs.degree){
-            f.resize(rhs.degree+1);
+            polynomial.resize(rhs.degree+1);
             degree = rhs.degree;
         }
         for (int i=0;i<=rhs.degree;i++){
-            f[i] += rhs.f[i];
+            polynomial[i] += rhs.polynomial[i];
         }
         regularize();
         return *this;
     }
     FPS& operator+=(const int rhs){
         if (degree == -1){
-            f.resize(1);
-            degree = 0;
-            f[0] = 0;
+            setDegree(0);
         }
-        f[0] += (T)rhs;
+        polynomial[0] += (T)rhs;
+        regularize();
         return *this;
     }
     FPS& operator+=(const T rhs){
         if (degree == -1){
-            f.resize(1);
-            degree = 0;
-            f[0] = 0;
+            setDegree(0);
         }
-        f[0] += rhs;
+        polynomial[0] += rhs;
+        regularize();
         return *this;
     }
     FPS& operator-=(const FPS& rhs){
         if (degree < rhs.degree){
-            f.resize(rhs.degree+1);
+            polynomial.resize(rhs.degree+1);
             degree = rhs.degree;
         }
         for (int i=0;i<=rhs.degree;i++){
-            f[i] -= rhs.f[i];
+            polynomial[i] -= rhs.polynomial[i];
         }
         regularize();
         return *this;
     }
     FPS& operator-=(const int rhs){
         if (degree == -1){
-            f.resize(1);
-            degree = 0;
-            f[0] = 0;
+            setDegree(0);
         }
-        f[0] -= (T)rhs;
+        polynomial[0] -= (T)rhs;
+        regularize();
         return *this;
     }
     FPS& operator-=(const T rhs){
         if (degree == -1){
-            f.resize(1);
-            degree = 0;
-            f[0] = 0;
+            setDegree(0);
         }
-        f[0] -= rhs;
+        polynomial[0] -= rhs;
         return *this;
     }
     FPS& operator*=(const FPS& rhs){
-        degree += rhs.degree;
-        if (degree == -2){
-            degree = -1;
+        if (degree == -1 || rhs.degree == -1){
+            setDegree(-1);
+            return *this;
         }
-        f = convolve(f, rhs.f);
+        degree += rhs.degree;
+        polynomial = convolve(polynomial, rhs.polynomial);
         regularize();
         return *this;
     }
     FPS& operator*=(const int rhs){
         for (int i=0;i<=degree;i++){
-            f[i] *= (T)rhs;
+            polynomial[i] *= (T)rhs;
         }
         return *this;
     }
     FPS& operator*=(const T rhs){
         for (int i=0;i<=degree;i++){
-            f[i] *= rhs;
+            polynomial[i] *= rhs;
         }
         return *this;
     }
@@ -637,40 +676,39 @@ class FormalPowerSeries{
         res *= rhs;
         return res;
     }
-    FPS& shiftMultiply(int n){
+    FPS& operator<<=(int n){
         degree += n;
-        f.resize(degree+1);
+        polynomial.resize(degree+1);
         for (int i=degree;i>=n;i--){
-            f[i] = f[i-n];
+            polynomial[i] = polynomial[i-n];
         }
         for (int i=0;i<n;i++){
-            f[i] = 0;
+            polynomial[i] = 0;
         }
         regularize();
         return *this;
     }
-    FPS shiftMultiplied(int n){
+    FPS operator<<(int n){
         FPS res = FPS(*this);
-        res.shiftMultiply(n);
+        res <<= n;
         return res;
     }
-    FPS& shiftDivide(int n){
+    FPS& operator>>=(int n){
         if (degree < n){
-            degree = -1;
-            f.resize(0);
+            setDegree(-1);
             return *this;
         }
         for (int i=n;i<=degree;i++){
-            f[i-n] = f[i];
+            polynomial[i-n] = polynomial[i];
         }
         degree -= n;
-        f.resize(degree+1);
+        polynomial.resize(degree+1);
         regularize();
         return *this;
     }
-    FPS shiftDivided(int n){
+    FPS operator>>(int n){
         FPS res = FPS(*this);
-        res.shiftDivide(n);
+        res >>= n;
         return res;
     }
     FPS& differentiate(){
@@ -678,9 +716,9 @@ class FormalPowerSeries{
             return *this;
         }
         for (int i=0;i<degree;i++){
-            f[i] = (T)(i+1)*f[i+1];
+            polynomial[i] = (T)(i+1)*polynomial[i+1];
         }
-        f[degree] = 0;
+        polynomial[degree] = 0;
         regularize();
         return *this;
     }
@@ -691,15 +729,15 @@ class FormalPowerSeries{
     }
     FPS& integrate(){
         degree++;
-        f.push_back(0);
+        polynomial.push_back(0);
         vector<T> invl(degree+1, 1);
         for (int i=2;i<=degree;i++){
             invl[i] = (T)(MOD / i) * (-invl[MOD%i]);
         }
         for (int i=degree;i>0;i--){
-            f[i] = invl[i] * f[i-1];
+            polynomial[i] = invl[i] * polynomial[i-1];
         }
-        f[0] = 0;
+        polynomial[0] = 0;
         regularize();
         return *this;
     }
@@ -714,24 +752,24 @@ class FormalPowerSeries{
             degree = -2;
             return *this;
         }
-        a = modpow(f[0], MOD-2);
-        FPS res(a), twoFactor(2), tmp(f[0]), h;
+        a = modpow(polynomial[0], MOD-2);
+        FPS res(a), twoFactor(2), tmp(polynomial[0]), h;
         int b = 1;
         while (b < degree+1){
             for (int i=0;i<b;i++){
                 if (i+b >= degree+1){
                     break;
                 }
-                tmp.f.push_back(f[i+b]);
+                tmp.polynomial.push_back(polynomial[i+b]);
                 tmp.degree++;
             }
             b <<= 1;
             h = twoFactor - tmp * res;
-            h.resize(b);
+            h.setDegree(b-1);
             res *= h;
         }
-        res.resize(degree+1);
         *this = res;
+        regularize();
         return *this;
     }
     FPS inversed(){
@@ -745,19 +783,19 @@ class FormalPowerSeries{
             return *this;
         }
         FPS tmp = rhs;
-        FPS fr = rev();
-        FPS gr = tmp.rev();
-        fr.resize(degree - rhs.degree + 1);
-        gr.resize(degree - rhs.degree + 1);
+        FPS fr = getReversedPolynomial();
+        FPS gr = tmp.getReversedPolynomial();
+        fr.setDegree(degree - rhs.degree);
+        gr.setDegree(degree - rhs.degree);
         fr *= gr.inverse();
-        fr.resize(degree - rhs.degree + 1);
-        *this = fr.rev();
+        fr.setDegree(degree - rhs.degree);
+        *this = fr.getReversedPolynomial();
         regularize();
         return *this;
     }
     FPS& operator/=(const T rhs){
         for (int i=0;i<=degree;i++){
-            f[i] /= rhs;
+            polynomial[i] /= rhs;
         }
         return *this;
     }
@@ -793,7 +831,7 @@ class FormalPowerSeries{
         vector<T> y(degree+1, 0);
         T t = 1;
         for (int i=0;i<=degree;i++){
-            x[degree-i] = f[i];
+            x[degree-i] = polynomial[i];
             x[degree-i] *= fact[i];
             y[i] = t;
             y[i] *= invf[i];
@@ -801,8 +839,8 @@ class FormalPowerSeries{
         }
         x = convolve(x, y);
         for (int i=0;i<=degree;i++){
-            f[i] = invf[i];
-            f[i] *= x[degree-i];
+            polynomial[i] = invf[i];
+            polynomial[i] *= x[degree-i];
         }
         regularize();
         return *this;
@@ -842,7 +880,7 @@ class FormalPowerSeries{
                 res[i] = 0;
                 continue;
             }
-            res[i] = fs[i+b].f[0];
+            res[i] = fs[i+b].polynomial[0];
         }
         return res;
     }
@@ -852,22 +890,23 @@ class FormalPowerSeries{
         }
         int btm = 0;
         for (int i=0;i<=degree;i++){
-            if (f[i] == 0){
+            if (polynomial[i] == 0){
                 btm++;
             } else{
                 break;
             }
         }
         if (btm & 1){
-            degree = -2;
+            setIsValid(false);
             return *this;
         }
         int z = degree - (btm >> 1);
-        FPS res = FPS(*this, false).shiftDivided(btm);
+        FPS res = FPS(*this) >> btm;
+        res.setDegree(degree - btm);
         int b = 1;
-        int t = modsqrt(res.f[0].val(), MOD);
+        int t = modsqrt(res.polynomial[0].val(), MOD);
         if (t == -1){
-            degree = -2;
+            setIsValid(false);
             return *this;
         }
         int bt = 1;
@@ -875,21 +914,21 @@ class FormalPowerSeries{
             bt <<= 1;
         }
         T x = t;
-        FPS g(x), h(res.f[0]);
+        FPS g(x), h(res.polynomial[0]);
         T i2 = T(2).inv();
         while (b <= bt){
             for (int i=0;i<b;i++){
                 if (i+b>res.degree){
                     break;
                 }
-                h.addManually(i+b, res.f[i+b]);
+                h.setCoefficient(i+b, res.polynomial[i+b]);
             }
             g += g.inversed() * h;
             b <<= 1;
             g *= i2;
-            g.resize(b);
+            g.setDegree(b-1);
         }
-        *this = g.shiftMultiply(btm>>1);
+        *this = g << (btm>>1);
         return *this;
     }
     FPS getSqrt(){
@@ -901,10 +940,10 @@ class FormalPowerSeries{
 
 template <int m>
 FormalPowerSeries<m> logarithm(FormalPowerSeries<m> fps){
-    int n = fps.degree+1;
+    int n = fps.getDegree();
     FormalPowerSeries<m> res;
     res = fps.inversed() * fps.differentiated();
-    res.resize(n);
+    res.setDegree(n);
     res.integrate();
     return res;
 }
@@ -912,10 +951,10 @@ FormalPowerSeries<m> logarithm(FormalPowerSeries<m> fps){
 template <int m>
 FormalPowerSeries<m> exponential(FormalPowerSeries<m> fps, int degreeRequire=-1){
     int resSize = 1;
-    if (fps.degree < degreeRequire){
-        fps.resize(degreeRequire+1);
+    if (fps.getDegree() < degreeRequire){
+        fps.setDegree(degreeRequire);
     }
-    int x = fps.degree + 1;
+    int x = fps.getDegree() + 1;
     if (x & (x - 1)){
         while (x & (x - 1)){
             x &= x - 1;
@@ -923,25 +962,25 @@ FormalPowerSeries<m> exponential(FormalPowerSeries<m> fps, int degreeRequire=-1)
         x <<= 1;
     }
     FormalPowerSeries<m> res(1), g(1), h(2), q, r, tmp;
-    if (fps.degree == -1){
+    if (fps.getDegree() == -1){
         tmp = 0;
     } else{
-        tmp = fps.f[0];
+        tmp = fps.getCoefficient(0);
     }
     while (2*resSize <= x){
         q = res * g;
-        q.resize(resSize);
+        q.setDegree(resSize-1);
         g *= (h - q);
-        g.resize(resSize);
+        g.setDegree(resSize-1);
         q = tmp.differentiated();
         r = q + g * (res.differentiated() - res * q);
-        r.resize(2*resSize);
+        r.setDegree(2*resSize-1);
         r.integrate();
         for (int i=0;i<resSize;i++){
-            if (i+resSize > fps.degree){
+            if (i+resSize > fps.getDegree()){
                 break;
             }
-            tmp.addManually(i+resSize, fps.f[i+resSize]);
+            tmp.setCoefficient(i+resSize, fps.getCoefficient(i+resSize));
         }
         q = tmp - r;
         q *= res;
@@ -954,12 +993,12 @@ FormalPowerSeries<m> exponential(FormalPowerSeries<m> fps, int degreeRequire=-1)
 template <int m, typename T>
 FormalPowerSeries<m> power(FormalPowerSeries<m> fps, T x){
     int t = -1;
-    int d = fps.degree;
+    int d = fps.getDegree();
     modint<m> a = 0;
     for (int i=0;i<=d;i++){
-        if (fps.f[i] != 0){
+        if (fps.getCoefficient(i) != 0){
             t = i;
-            a = fps.f[i];
+            a = fps.getCoefficient(i);
             break;
         }
     }
@@ -973,21 +1012,21 @@ FormalPowerSeries<m> power(FormalPowerSeries<m> fps, T x){
     if ((long long) x * t > d){
         return FormalPowerSeries<m>(0);
     }
-    gps.shiftDivide(t);
-    for (int i=0;i<=gps.degree;i++){
-        gps.f[i] /= a;
+    gps >>= t;
+    for (int i=0;i<=gps.getDegree();i++){
+        gps.setCoefficient(i, gps.getCoefficient(i) / a);
     }
-    gps.resize(d+1);
+    gps.setDegree(d);
     gps = logarithm(gps);
     for (int i=0;i<=d;i++){
-        gps.f[i] *= x;
+        gps.setCoefficient(i, gps.getCoefficient(i) * x);
     }
     gps = exponential(gps, d);
-    gps.shiftMultiply(x * t);
-    gps.resize(d+1);
+    gps <<= (x * t);
+    gps.setDegree(d);
     a = modpow<m>(a, (long long)x);
     for (int i=0;i<=d;i++){
-        gps.f[i] *= a;
+        gps.setCoefficient(i, gps.getCoefficient(i) * a);
     }
     return gps;
 }
@@ -1002,9 +1041,7 @@ FormalPowerSeries<m> interpolate(vector<modint<m>> x, vector<modint<m>> y){
     vector<FormalPowerSeries<m>> v(b << 1, 1);
     vector<FormalPowerSeries<m>> v2(b<<1, 0);
     for (int i=0;i<n;i++){
-        v[i+b].resize(2);
-        v[i+b].f[0] = -x[i];
-        v[i+b].f[1] = 1;
+        v[i+b] = FormalPowerSeries<m>(vector<modint<m>>({-x[i], 1}));
     }
     for (int i=b-1;i>0;i--){
         v[i] = v[i<<1] * v[(i<<1)|1];
@@ -1016,7 +1053,7 @@ FormalPowerSeries<m> interpolate(vector<modint<m>> x, vector<modint<m>> y){
         v2[i] = v2[i>>1] % v[i];
     }
     for (int i=0;i<n;i++){
-        v2[i+b].f[0] = y[i] / v2[i+b].f[0];
+        v2[i+b].setCoefficient(0, y[i] / v2[i+b].getCoefficient(0));
     }
     for (int i=b-1;i>0;i--){
         v2[i] = v2[i<<1]*v[(i<<1)|1] + v[i<<1]*v2[(i<<1)|1];
@@ -1026,7 +1063,7 @@ FormalPowerSeries<m> interpolate(vector<modint<m>> x, vector<modint<m>> y){
 
 template <int m>
 FormalPowerSeries<m> compose(FormalPowerSeries<m> lhs, FormalPowerSeries<m> rhs, int degreeRequire=-1){
-    int n = (degreeRequire == -1 ? lhs.degree : degreeRequire);
+    int n = (degreeRequire == -1 ? lhs.getDegree() : degreeRequire);
     if (n <= 0){
         return lhs;
     }
@@ -1048,23 +1085,23 @@ FormalPowerSeries<m> compose(FormalPowerSeries<m> lhs, FormalPowerSeries<m> rhs,
     if (c * k * k <= n){
         k++;
     }
-    FormalPowerSeries<m> p = rhs, q = rhs.shiftDivided(k);
-    p.resize(k);
+    FormalPowerSeries<m> p = rhs, q = rhs >> k;
+    p.setDegree(k-1);
     FormalPowerSeries<m> tmpsq = p;
     FormalPowerSeries<m> bas = 1;
-    if (tmpsq.degree == -1){
+    if (tmpsq.getDegree() == -1){
         FormalPowerSeries<m> res = 0;
         for (int i=0;i<=(n+k-1)/k;i++){
-            if (i <= lhs.degree){
-                tmpsq = bas * FormalPowerSeries<m>(lhs.f[i]);
-                tmpsq.shiftMultiply(i*k);
+            if (i <= lhs.getDegree()){
+                tmpsq = bas * FormalPowerSeries<m>(lhs.getCoefficient(i));
+                tmpsq <<= (i*k);
                 res += tmpsq;
-                if (res.degree > n){
-                    res.resize(n+1);
+                if (res.getDegree() > n){
+                    res.setDegree(n);
                 }
                 bas *= q;
-                if (bas.degree > n){
-                    bas.resize(n+1);
+                if (bas.getDegree() > n){
+                    bas.setDegree(n);
                 }
             }
         }
@@ -1072,18 +1109,17 @@ FormalPowerSeries<m> compose(FormalPowerSeries<m> lhs, FormalPowerSeries<m> rhs,
     }
     vector<FormalPowerSeries<m>> v(b<<1, 0);
     for (int i=0;i<=n;i++){
-        v[i+b].resize(1);
-        v[i+b].f[0] = lhs.f[i];
+        v[i+b] = FormalPowerSeries<m>(lhs.getCoefficient(i));
     }
     for (int i=b-1;i>0;i--){
         v[i] = v[i<<1] + v[(i<<1)|1] * tmpsq;
-        if (v[i].degree > n){
-            v[i].resize(n+1);
+        if (v[i].getDegree() > n){
+            v[i].setDegree(n);
         }
         if ((i & (i - 1)) == 0){
             tmpsq *= tmpsq;
-            if (tmpsq.degree > n){
-                tmpsq.resize(n+1);
+            if (tmpsq.getDegree() > n){
+                tmpsq.setDegree(n);
             }
         }
     }
@@ -1097,41 +1133,41 @@ FormalPowerSeries<m> compose(FormalPowerSeries<m> lhs, FormalPowerSeries<m> rhs,
     FormalPowerSeries<m> t = v[1];
     FormalPowerSeries<m> ip = p.differentiated();
     int lz = 0;
-    for (int i=0;i<=ip.degree;i++){
-        if (ip.f[i] != 0){
+    for (int i=0;i<=ip.getDegree();i++){
+        if (ip.getCoefficient(i) != 0){
             break;
         }
         lz++;
     }
-    ip.shiftDivide(lz);
-    ip.resize(n+1);
+    ip >>= lz;
+    ip.setDegree(n);
     ip.inverse();
     bas = 1;
     FormalPowerSeries<m> res = v[1];
     t.differentiate();
     t *= ip;
-    t.shiftDivide(lz);
+    t >>= lz;
     bas *= q;
     FormalPowerSeries<m> X = ip * p.differentiated();
     for (int i=1;i<=(n+lz+k-1)/k;i++){
         tmpsq = t * bas;
-        tmpsq.shiftMultiply(i*k);
-        if (tmpsq.degree > n){
-            tmpsq.resize(n+1);
+        tmpsq <<= (i*k);
+        if (tmpsq.getDegree() > n){
+            tmpsq.setDegree(n);
         }
         res += tmpsq * invf[i];
         bas *= q;
-        if (bas.degree > n){
-            bas.resize(n+1);
+        if (bas.getDegree() > n){
+            bas.setDegree(n);
         }
-        if (res.degree > n){
-            res.resize(n+1);
+        if (res.getDegree() > n){
+            res.setDegree(n);
         }
         t.differentiate();
         t *= ip;
-        t.shiftDivide(lz);
-        if (t.degree > n+1){
-            t.resize(n+2);
+        t >>= lz;
+        if (t.getDegree() > n+1){
+            t.setDegree(n+1);
         }
     }
     return res;
@@ -1139,13 +1175,13 @@ FormalPowerSeries<m> compose(FormalPowerSeries<m> lhs, FormalPowerSeries<m> rhs,
 
 template <int m>
 FormalPowerSeries<m> naiveCompose(FormalPowerSeries<m> lhs, FormalPowerSeries<m> rhs){
-    int n = lhs.degree;
+    int n = lhs.getDegree();
     FormalPowerSeries<m> g(1);
     FormalPowerSeries<m> res(0);
     for (int i=0;i<=n;i++){
-        res += g * lhs.f[i];
+        res += g * lhs.getCoefficient(i);
         g *= rhs;
-        g.resize(n+1);
+        g.setDegree(n);
     }
     return res;
 }
@@ -1165,7 +1201,7 @@ vector<modint<m>> getBernoulliNumberTable(int n){
     r.inverse();
     vector<modint<m>> res(n+1);
     for (int i=0;i<=n;i++){
-        res[i] = r.f[i];
+        res[i] = r.getCoefficient(i);
         res[i] *= fact[i];
     }
     return res;
@@ -1179,15 +1215,15 @@ vector<modint<m>> getPartitionNumberTable(int n){
         invn[i] *= (m / i);
     }
     FormalPowerSeries<m> f;
-    f.resize(n+1);
+    f.setDegree(n);
     for (int i=1;i<=n;i++){
         for (int j=1;i*j<=n;j++){
-            f.f[i*j] += invn[j];
+            f.setCoefficient(i*j, f.getCoefficient(i*j) + invn[j]);
         }
     }
     f = exponential<m>(f);
     for (int i=0;i<=n;i++){
-        invn[i] = f.f[i];
+        invn[i] = f.getCoefficient(i);
     }
     return invn;
 }
@@ -1195,7 +1231,7 @@ vector<modint<m>> getPartitionNumberTable(int n){
 template <int m>
 vector<modint<m>> getStirlingNumberOfFirstTable(int n){
     FormalPowerSeries<m> g = 1;
-    FormalPowerSeries<m> h({0, 1});
+    FormalPowerSeries<m> h(vector<modint<m>>({0, 1}));
     int b = 1;
     int t = 0;
     while (t < n){
@@ -1208,7 +1244,7 @@ vector<modint<m>> getStirlingNumberOfFirstTable(int n){
     }
     vector<modint<m>> res(n+1);
     for (int i=0;i<=n;i++){
-        res[i] = g.f[i];
+        res[i] = g.getCoefficient(i);
     }
     return res;
 }
@@ -1235,7 +1271,7 @@ vector<modint<m>> getStirlingNumberOfSecondTable(int n){
     FormalPowerSeries<m> f(a), g(b);
     f *= g;
     for (int i=0;i<=n;i++){
-        a[i] = f.f[i];
+        a[i] = f.getCoefficient(i);
     }
     return a;
 }
@@ -1259,20 +1295,10 @@ vector<modint<m>> getSubsetSum(vector<modint<m>> v){
     FormalPowerSeries<m> fps(res);
     fps = exponential(fps);
     fps *= offset;
-    return fps.f;
-}
-
-template <typename T>
-void printVector(vector<T> a){
-    int n = (int)a.size();
-    if (n <= 0){
-        return;
+    for (int i=0;i<=t;i++){
+        res[i] = fps.getCoefficient(i);
     }
-    cout << a[0];
-    for (int i=1;i<n;i++){
-        cout << " " << a[i];
-    }
-    cout << endl;
+    return res;
 }
 
 constexpr const int mod = 998244353;
