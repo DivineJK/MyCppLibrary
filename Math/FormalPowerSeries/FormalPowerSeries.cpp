@@ -1302,6 +1302,6 @@ vector<modint<m>> getSubsetSum(vector<modint<m>> v){
     return res;
 }
 
-constexpr const int mod = 924844033;
+constexpr const int mod = 998244353;
 using mint = modint<mod>;
 using FPS = FormalPowerSeries<mod>;
