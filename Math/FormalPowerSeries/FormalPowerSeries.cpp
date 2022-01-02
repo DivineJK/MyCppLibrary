@@ -217,12 +217,12 @@ class FormalPowerSeries{
     using FPS = FormalPowerSeries<MOD>;
     protected:
     inline static bool isInitialized = false;
-    inline static T primitiveRoot = ((T)31).inv();
-    inline static T inverseRoot = 31;
+    inline static T primitiveRoot = 0;
+    inline static T inverseRoot = 0;
     inline static vector<T> primitiveBaseList = {};
     inline static vector<T> inverseBaseList = {};
     inline static vector<T> cumulativeBase = {};
-    inline static int baseSize = 23;
+    inline static int baseSize = 0;
     bool isValid = true;
     int degree = -1;
     vector<T> polynomial;
@@ -261,6 +261,7 @@ class FormalPowerSeries{
             }
             primitiveBaseList.resize(baseSize+1);
             inverseBaseList.resize(baseSize+1);
+            cumulativeBase.resize(baseSize-1);
             while (true){
                 bool flg = true;
                 T tmp = inverseRoot;
@@ -1301,6 +1302,6 @@ vector<modint<m>> getSubsetSum(vector<modint<m>> v){
     return res;
 }
 
-constexpr const int mod = 998244353;
+constexpr const int mod = 924844033;
 using mint = modint<mod>;
 using FPS = FormalPowerSeries<mod>;
