@@ -1,22 +1,33 @@
 template <class T>
 class Matrix{
-    public:
-    int h, w;
+    protected:
+    int row = 0;
+    int column = 0;
     vector<vector<T>> a;
+    public:
+    static Matrix<T> getIdentityMatrix(int size){
+        Matrix<T> ret(size, size);
+        for (int i=0;i<size;i++){
+            ret[i][i] = (T)1;
+        }
+        return ret;
+    }
     Matrix(int n = 0, int m = 0, T x = 0){
-        h = n;
-        w = m;
-        a = vector<vector<T>>(h, vector<T>(w));
-        for (int i=0;i<min(h, w);i++){
-            a[i][i] = x;
+        row = n;
+        column = m;
+        a = vector<vector<T>>(row, vector<T>(column));
+        for (int i=0;i<row;i++){
+            for (int j=0;j<column;j++){
+                a[i][j] = x;
+            }
         }
     }
     Matrix(vector<vector<T>> x){
-        int h = x.size(), w = x[0].size();
-        a = vector<vector<T>>(h, vector<T>(w));
-        for (int i=0;i<h;i++){
-            assert(w == x[i].size());
-            for (int j=0;j<w;j++){
+        int row = x.size(), column = x[0].size();
+        a = vector<vector<T>>(row, vector<T>(column));
+        for (int i=0;i<row;i++){
+            assert(column == x[i].size());
+            for (int j=0;j<column;j++){
                 a[i][j] = x[i][j];
             }
         }
@@ -26,15 +37,34 @@ class Matrix{
     vector<T>& operator[](const int i){
         return a[i];
     }
-    int size() const{
-        return h;
+    int getRow() const{
+        return row;
+    }
+    void setRow(int aRow){
+        if (row == aRow){
+            return;
+        }
+        a.resize(aRow);
+        row = aRow;
+    }
+    int getColumn() const{
+        return column;
+    }
+    void setColumn(int aColumn){
+        if (column == aColumn){
+            return;
+        }
+        for (int i=0;i<row;i++){
+            a[i].resize(aColumn);
+        }
+        column = aColumn;
     }
     friend ostream& operator<<(ostream& os, Matrix& rhs){
-        for (int i=0;i<rhs.size();i++){
+        for (int i=0;i<rhs.getRow();i++){
             if (i){
                 os << "\n";
             }
-            for (int j=0;j<rhs[0].size();j++){
+            for (int j=0;j<rhs.getColumn();j++){
                 if (j){
                     os << " ";
                 }
@@ -44,8 +74,8 @@ class Matrix{
         return os;
     }
     friend istream& operator>>(istream& ist, Matrix& rhs){
-        for (int i=0;i<rhs.size();i++){
-            for (int j=0;j<rhs[0].size();j++){
+        for (int i=0;i<rhs.getRow();i++){
+            for (int j=0;j<rhs.getColumn();j++){
                 T s;
                 ist >> s;
                 rhs[i][j] = s;
@@ -54,11 +84,11 @@ class Matrix{
         return (ist);
     }
     bool operator==(Matrix& rhs){
-        if (h != rhs.size() || w != rhs[0].size()){
+        if (row != rhs.getRow() || column != rhs.getColumn()){
             return false;
         }
-        for (int i=0;i<h;i++){
-            for (int j=0;j<w;j++){
+        for (int i=0;i<row;i++){
+            for (int j=0;j<column;j++){
                 if (a[i][j] != rhs[i][j]){
                     return false;
                 }
@@ -70,9 +100,9 @@ class Matrix{
         return !(this == rhs);
     }
     Matrix<T>& operator+=(Matrix& rhs){
-        assert(h == rhs.size() && w == rhs[0].size());
-        for (int i=0;i<h;i++){
-            for (int j=0;j<w;j++){
+        assert(row == rhs.size() && column == rhs[0].size());
+        for (int i=0;i<row;i++){
+            for (int j=0;j<column;j++){
                 a[i][j] += rhs[i][j];
             }
         }
@@ -84,9 +114,9 @@ class Matrix{
         return res;
     }
     Matrix<T>& operator-=(Matrix& rhs){
-        assert(h == rhs.size() && w == rhs[0].size());
-        for (int i=0;i<h;i++){
-            for (int j=0;j<w;j++){
+        assert(row == rhs.size() && column == rhs[0].size());
+        for (int i=0;i<row;i++){
+            for (int j=0;j<column;j++){
                 a[i][j] -= rhs[i][j];
             }
         }
@@ -98,11 +128,11 @@ class Matrix{
         return res;
     }
     Matrix<T>& operator*=(Matrix& rhs){
-        assert(w == rhs.size());
-        vector<vector<T>> res(h, vector<T>(rhs[0].size(), 0));
-        for (int i=0;i<h;i++){
-            for (int j=0;j<rhs[0].size();j++){
-                for (int k=0;k<w;k++){
+        assert(column == rhs.getRow());
+        vector<vector<T>> res(row, vector<T>(rhs.getColumn(), 0));
+        for (int i=0;i<row;i++){
+            for (int j=0;j<rhs.getColumn();j++){
+                for (int k=0;k<column;k++){
                     res[i][j] += a[i][k] * rhs[k][j];
                 }
             }
@@ -111,8 +141,8 @@ class Matrix{
         return *this;
     }
     Matrix<T>& operator*=(T rhs){
-        for (int i=0;i<h;i++){
-            for (int j=0;j<w;j++){
+        for (int i=0;i<row;i++){
+            for (int j=0;j<column;j++){
                 a[i][j] *= rhs;
             }
         }
@@ -124,18 +154,3 @@ class Matrix{
         return res;
     }
 };
-
-template <class T, typename Tp>
-Matrix<T> pow(Matrix<T> a, Tp n){
-    int m = a.size();
-    Matrix<T> y(m, m, 1);
-    Matrix<T> b = a;
-    while (n){
-        if (n & 1){
-            y *= b;
-        }
-        b *= b;
-        n >>= 1;
-    }
-    return y;
-}
