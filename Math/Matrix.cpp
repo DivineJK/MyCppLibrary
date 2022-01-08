@@ -154,3 +154,19 @@ class Matrix{
         return res;
     }
 };
+
+template <class T, typename Tp>
+Matrix<T> pow(Matrix<T> a, Tp n){
+    assert(a.getRow() == a.getColumn());
+    int m = a.getRow();
+    Matrix<T> y = Matrix<T>::getIdentityMatrix(m);
+    Matrix<T> b = a;
+    while (n){
+        if (n & 1){
+            y *= b;
+        }
+        b *= b;
+        n >>= 1;
+    }
+    return y;
+}
